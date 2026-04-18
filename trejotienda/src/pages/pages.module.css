@@ -1,0 +1,272 @@
+.hero {
+  text-align: center;
+  padding: 2rem 0 1rem;
+}
+
+.kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+}
+
+.heroTitle {
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.75rem;
+}
+
+.lead {
+  max-width: 44ch;
+  margin: 0 auto 1.5rem;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.hint code {
+  background: var(--card);
+  padding: 0.15em 0.4em;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.pageTitle {
+  font-size: 1.65rem;
+  font-weight: 800;
+  margin: 0 0 1rem;
+  letter-spacing: -0.02em;
+}
+
+.subTitle {
+  font-size: 1.1rem;
+  margin: 1.5rem 0 0.75rem;
+}
+
+.narrow {
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+
+.formCard {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem 1.35rem;
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.input,
+.textarea {
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #0f1318;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.error {
+  color: var(--danger);
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.banner {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fcd34d;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.92rem;
+}
+
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1.2rem;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(180deg, var(--accent), var(--accent-dim));
+  color: #0c0a09;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btnPrimary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btnGhost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1.2rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btnGhost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cardTitle {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.cardDesc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+  flex: 1;
+}
+
+.price {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--accent);
+  margin: 0;
+}
+
+.stock {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.cartList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+}
+
+.cartRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+@media (max-width: 560px) {
+  .cartRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.qtyRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.qty {
+  width: 4rem;
+  padding: 0.35rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #0f1318;
+  color: var(--text);
+}
+
+.lineTotal {
+  font-weight: 700;
+  text-align: right;
+}
+
+.total {
+  font-size: 1.15rem;
+  margin: 0 0 0.5rem;
+}
+
+.linkbtn {
+  background: transparent;
+  border: none;
+  color: #93c5fd;
+  cursor: pointer;
+  font-size: 0.88rem;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.adminList {
+  padding-left: 1.1rem;
+  color: var(--muted);
+}
+
+.adminList li {
+  margin-bottom: 0.35rem;
+}

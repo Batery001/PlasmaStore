@@ -4,10 +4,12 @@ import { fileURLToPath } from "node:url";
 import express from "express";
 import chokidar from "chokidar";
 import { XMLParser } from "fast-xml-parser";
+import { mountStoreAndSession } from "./store-routes.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..", "..");
 const UI_DIR = path.join(ROOT, "preview-standings");
+const STORE_DIST = path.join(ROOT, "trejotienda", "dist");
 
 const PORT = Number(process.env.PORT) || 3847;
 const TOM_DATA =
@@ -228,6 +230,7 @@ function syncPendingFromNewestRootTdf() {
 function main() {
   const app = express();
   app.use(express.json({ limit: "2mb" }));
+  mountStoreAndSession(app);
 
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, tomData: TOM_DATA });
@@ -272,6 +275,16 @@ function main() {
 
   app.use(express.static(UI_DIR));
 
+  if (fs.existsSync(path.join(STORE_DIST, "index.html"))) {
+    app.use("/tienda", express.static(STORE_DIST));
+    app.get(/^\/tienda(\/.*)?$/, (req, res, next) => {
+      if (req.method !== "GET" && req.method !== "HEAD") return next();
+      res.sendFile(path.join(STORE_DIST, "index.html"));
+    });
+  } else {
+    console.warn("[tom-bridge] Trejotienda: ejecuta `npm run build` en la carpeta /trejotienda para servir /tienda/");
+  }
+
   const watcher = chokidar.watch(path.join(TOM_DATA, "*.tdf"), {
     ignoreInitial: true,
     awaitWriteFinish: { stabilityThreshold: 400, pollInterval: 100 },
@@ -296,7 +309,9 @@ function main() {
     } else {
       syncPendingFromNewestRootTdf();
     }
-    console.log(`[tom-bridge] UI http://localhost:${PORT}/  (usuario: /user.html, admin: /admin.html)`);
+    console.log(
+      `[tom-bridge] Torneos: http://localhost:${PORT}/  | Tienda: http://localhost:${PORT}/tienda/`
+    );
     console.log(`[tom-bridge] Vigilando .tdf en raíz de: ${TOM_DATA}`);
   });
 }

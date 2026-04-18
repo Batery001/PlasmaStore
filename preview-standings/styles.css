@@ -494,6 +494,10 @@ body.theme-hub {
   border-left: 4px solid #7c3aed;
 }
 
+.hub-card--store {
+  border-left: 4px solid #059669;
+}
+
 .hub__hint {
   margin: 2rem 0 0;
   font-size: 0.85rem;
