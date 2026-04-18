@@ -153,7 +153,30 @@ let pending = {
 /** Último torneo publicado desde el panel admin (solo memoria; se pierde al reiniciar el servidor). */
 let lastPublished = null;
 
-function readAndIngest(absPath) {
+function listRootTdfFiles() {
+  if (!fs.existsSync(TOM_DATA)) return [];
+  /** @type {{ abs: string; base: string; mtimeMs: number }[]} */
+  const out = [];
+  for (const n of fs.readdirSync(TOM_DATA)) {
+    if (!n.toLowerCase().endsWith(".tdf")) continue;
+    const abs = path.join(TOM_DATA, n);
+    let st;
+    try {
+      st = fs.statSync(abs);
+    } catch {
+      continue;
+    }
+    if (!st.isFile()) continue;
+    out.push({ abs, base: n, mtimeMs: Math.floor(st.mtimeMs) });
+  }
+  return out;
+}
+
+/**
+ * Lee un .tdf concreto y actualiza `pending`.
+ * @param {string} absPath
+ */
+function ingestFile(absPath) {
   const base = path.basename(absPath);
   if (!base.toLowerCase().endsWith(".tdf")) return;
   const parentDir = path.dirname(absPath);
@@ -176,24 +199,30 @@ function readAndIngest(absPath) {
   const st = fs.statSync(absPath);
   const parsed = parseTdf(text, base);
   pending = {
-    mtimeMs: st.mtimeMs,
+    mtimeMs: Math.floor(st.mtimeMs),
     fileName: base,
     payload: parsed.ok ? parsed.payload : null,
     parseError: parsed.ok ? null : parsed.error || "Error al parsear",
   };
 }
 
-function bootstrapLatestTdf() {
-  if (!fs.existsSync(TOM_DATA)) return;
-  const names = fs.readdirSync(TOM_DATA).filter((n) => n.toLowerCase().endsWith(".tdf"));
-  let best = null;
-  for (const n of names) {
-    const abs = path.join(TOM_DATA, n);
-    const st = fs.statSync(abs);
-    if (!st.isFile()) continue;
-    if (!best || st.mtimeMs > best.mtimeMs) best = { abs, mtimeMs: st.mtimeMs };
+/**
+ * Siempre usa el .tdf más reciente (mtime) en la raíz de TOM_DATA.
+ * Así un torneo nuevo (p. ej. testupp.tdf) no queda oculto detrás de uno viejo (test.tdf).
+ */
+function syncPendingFromNewestRootTdf() {
+  const files = listRootTdfFiles();
+  if (files.length === 0) {
+    pending = {
+      mtimeMs: 0,
+      fileName: "",
+      payload: null,
+      parseError: "No hay archivos .tdf en la raíz de TOM_DATA.",
+    };
+    return;
   }
-  if (best) readAndIngest(best.abs);
+  files.sort((a, b) => b.mtimeMs - a.mtimeMs);
+  ingestFile(files[0].abs);
 }
 
 function main() {
@@ -205,6 +234,12 @@ function main() {
   });
 
   app.get("/api/pending", (_req, res) => {
+    syncPendingFromNewestRootTdf();
+    const hasFinishedStandings = !!(
+      pending.payload &&
+      Array.isArray(pending.payload.categories) &&
+      pending.payload.categories.length > 0
+    );
     res.json({
       ok: !pending.parseError,
       pending: {
@@ -212,6 +247,7 @@ function main() {
         mtimeMs: pending.mtimeMs,
         payload: pending.payload,
         parseError: pending.parseError,
+        hasFinishedStandings,
       },
     });
   });
@@ -242,23 +278,23 @@ function main() {
   });
 
   let debounce = null;
-  const schedule = (absPath) => {
+  const scheduleRescan = () => {
     if (debounce) clearTimeout(debounce);
     debounce = setTimeout(() => {
       debounce = null;
-      readAndIngest(absPath);
-    }, 300);
+      syncPendingFromNewestRootTdf();
+    }, 400);
   };
 
-  watcher.on("add", schedule);
-  watcher.on("change", schedule);
+  watcher.on("add", scheduleRescan);
+  watcher.on("change", scheduleRescan);
 
   app.listen(PORT, () => {
     if (!fs.existsSync(TOM_DATA)) {
       console.warn("[tom-bridge] Carpeta TOM_DATA no existe:", TOM_DATA);
       console.warn("[tom-bridge] Define TOM_DATA con la ruta correcta.");
     } else {
-      bootstrapLatestTdf();
+      syncPendingFromNewestRootTdf();
     }
     console.log(`[tom-bridge] UI http://localhost:${PORT}/  (usuario: /user.html, admin: /admin.html)`);
     console.log(`[tom-bridge] Vigilando .tdf en raíz de: ${TOM_DATA}`);

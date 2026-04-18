@@ -382,7 +382,7 @@
       const data = await res.json();
       liveTomDataPath = data.tomData || "";
       show(liveBanner, true);
-      liveBannerText.textContent = `Watcher activo. Leyendo cambios en la raíz de: ${liveTomDataPath}`;
+      liveBannerText.textContent = `Watcher activo. Siempre se toma el .tdf más reciente (por fecha de guardado) entre los de la raíz de: ${liveTomDataPath}. El aviso destacado solo aparece cuando hay standing final o un error de lectura.`;
       modeBadge.textContent = "Modo watcher (.tdf)";
       show(adminNotice, false);
       pollLoop();
@@ -402,14 +402,14 @@
         const p = data.pending;
         if (!p) continue;
 
-        const key = `${p.fileName}|${p.mtimeMs}|${p.parseError || ""}`;
+        const key = `${p.fileName}|${Math.floor(Number(p.mtimeMs) || 0)}|${p.parseError || ""}`;
         if (key === lastLiveKey) continue;
         lastLiveKey = key;
 
-        show(adminNotice, true);
         const savedAt = formatSavedAt(p.mtimeMs);
 
         if (p.parseError) {
+          show(adminNotice, true);
           lastPendingSnapshot = null;
           adminNoticeBody.innerHTML = `Error al leer <strong>${escapeHtml(p.fileName)}</strong>.<br><strong>Guardado en disco:</strong> ${escapeHtml(
             savedAt
@@ -444,9 +444,18 @@
 
         const tName = p.payload.tournamentName || "—";
         const tStart = p.payload.tournamentStartDate || "—";
-        adminNoticeBody.innerHTML = `Hay una actualización del torneo <strong>${escapeHtml(tName)}</strong>.<br><strong>Fecha del evento (TOM):</strong> ${escapeHtml(
-          tStart
-        )}<br><strong>Archivo:</strong> ${escapeHtml(p.fileName)} · <strong>Guardado en disco:</strong> ${escapeHtml(savedAt)}`;
+        const finalReady = p.hasFinishedStandings === true;
+
+        if (finalReady) {
+          show(adminNotice, true);
+          adminNoticeBody.innerHTML = `Hay <strong>standing final</strong> para revisar.<br><strong>Torneo:</strong> ${escapeHtml(
+            tName
+          )} · <strong>Fecha del evento (TOM):</strong> ${escapeHtml(tStart)}<br><strong>Archivo (.tdf más reciente):</strong> ${escapeHtml(
+            p.fileName
+          )} · <strong>Guardado en disco:</strong> ${escapeHtml(savedAt)}`;
+        } else {
+          show(adminNotice, false);
+        }
 
         if (autoRefresh.checked) {
           show(btnOpenPreview, false);
