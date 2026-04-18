@@ -1,0 +1,244 @@
+import path from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+import express from "express";
+import chokidar from "chokidar";
+import { XMLParser } from "fast-xml-parser";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.join(__dirname, "..", "..");
+const UI_DIR = path.join(ROOT, "preview-standings");
+
+const PORT = Number(process.env.PORT) || 3847;
+const TOM_DATA =
+  process.env.TOM_DATA || path.join(process.env.USERPROFILE || "", "TOM_DATA");
+
+const CATEGORY_LABEL = {
+  "0": "Categoría Junior",
+  "1": "Categoría Senior",
+  "2": "Categoría Máster",
+};
+
+function asArray(x) {
+  if (x == null) return [];
+  return Array.isArray(x) ? x : [x];
+}
+
+function buildPlayerMap(root) {
+  const players = asArray(root?.players?.player);
+  /** @type {Map<string, { firstname: string; lastname: string }>} */
+  const map = new Map();
+  for (const p of players) {
+    const id = p["@_userid"] ?? p["@_user"] ?? p.userid;
+    const uid = id != null ? String(id) : null;
+    if (!uid) continue;
+    map.set(uid, {
+      firstname: String(p.firstname ?? ""),
+      lastname: String(p.lastname ?? ""),
+    });
+  }
+  return map;
+}
+
+/**
+ * @param {string} xmlText
+ * @param {string} fileName
+ */
+function parseTdf(xmlText, fileName) {
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: "@_",
+  });
+  let root;
+  try {
+    root = parser.parse(xmlText).tournament;
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : String(e),
+      payload: null,
+    };
+  }
+
+  if (!root) {
+    return { ok: false, error: "XML sin nodo raíz tournament", payload: null };
+  }
+
+  const tournamentName = String(root.data?.name ?? "").trim();
+  const tomVersion = root["@_version"] != null ? String(root["@_version"]) : "";
+  const playerMap = buildPlayerMap(root);
+
+  const pods = asArray(root.standings?.pod);
+  const warnings = [];
+
+  const categories = [];
+  for (const pod of pods) {
+    const type = pod["@_type"] != null ? String(pod["@_type"]) : "";
+    if (type !== "finished") continue;
+
+    const catCode = pod["@_category"] != null ? String(pod["@_category"]) : "";
+    const plist = asArray(pod.player)
+      .map((row) => ({
+        id: row["@_id"] != null ? String(row["@_id"]) : "",
+        place: row["@_place"] != null ? parseInt(String(row["@_place"]), 10) : NaN,
+      }))
+      .filter((r) => r.id && Number.isFinite(r.place));
+
+    if (plist.length === 0) continue;
+
+    plist.sort((a, b) => a.place - b.place);
+    const top4 = plist.slice(0, 4).map((row) => {
+      const info = playerMap.get(row.id) || { firstname: "", lastname: "" };
+      const name = `${info.firstname} ${info.lastname}`.trim() || row.id;
+      return {
+        Clasificación: String(row.place),
+        Nombre: name,
+        "Play! ID": row.id,
+      };
+    });
+
+    const division = CATEGORY_LABEL[catCode] || `Categoría (${catCode || "?"})`;
+
+    categories.push({
+      division,
+      categoryCode: catCode,
+      headers: ["Clasificación", "Nombre", "Play! ID"],
+      rows: top4,
+    });
+  }
+
+  if (categories.length === 0) {
+    warnings.push(
+      "No hay standings “finished” con jugadores en el .tdf (torneo sin cerrar o archivo intermedio)."
+    );
+  }
+
+  let roundCount = 0;
+  const podNode = root.pods?.pod;
+  const firstPod = Array.isArray(podNode) ? podNode[0] : podNode;
+  if (firstPod?.rounds?.round != null) {
+    roundCount = asArray(firstPod.rounds.round).length;
+  }
+
+  const payload = {
+    source: "tdf",
+    sourceFile: fileName,
+    tournamentName,
+    tomVersion,
+    roundCurrent: roundCount || null,
+    roundTotal: roundCount || null,
+    roundLabel: roundCount ? `Rondas en archivo: ${roundCount}` : "",
+    generatedAt: "",
+    categories: categories.map((c) => ({
+      division: c.division,
+      categoryCode: c.categoryCode,
+      top4: c.rows,
+    })),
+    warnings: [...warnings],
+  };
+
+  return { ok: true, error: null, payload };
+}
+
+/** @type {{ mtimeMs: number; fileName: string; payload: object | null; parseError: string | null }} */
+let pending = {
+  mtimeMs: 0,
+  fileName: "",
+  payload: null,
+  parseError: null,
+};
+
+function readAndIngest(absPath) {
+  const base = path.basename(absPath);
+  if (!base.toLowerCase().endsWith(".tdf")) return;
+  const parentDir = path.dirname(absPath);
+  const isRootTdf = path.resolve(parentDir) === path.resolve(TOM_DATA);
+  if (!isRootTdf) return;
+
+  let text;
+  try {
+    text = fs.readFileSync(absPath, "utf8");
+  } catch (e) {
+    pending = {
+      mtimeMs: Date.now(),
+      fileName: base,
+      payload: null,
+      parseError: e instanceof Error ? e.message : String(e),
+    };
+    return;
+  }
+
+  const st = fs.statSync(absPath);
+  const parsed = parseTdf(text, base);
+  pending = {
+    mtimeMs: st.mtimeMs,
+    fileName: base,
+    payload: parsed.ok ? parsed.payload : null,
+    parseError: parsed.ok ? null : parsed.error || "Error al parsear",
+  };
+}
+
+function bootstrapLatestTdf() {
+  if (!fs.existsSync(TOM_DATA)) return;
+  const names = fs.readdirSync(TOM_DATA).filter((n) => n.toLowerCase().endsWith(".tdf"));
+  let best = null;
+  for (const n of names) {
+    const abs = path.join(TOM_DATA, n);
+    const st = fs.statSync(abs);
+    if (!st.isFile()) continue;
+    if (!best || st.mtimeMs > best.mtimeMs) best = { abs, mtimeMs: st.mtimeMs };
+  }
+  if (best) readAndIngest(best.abs);
+}
+
+function main() {
+  const app = express();
+
+  app.get("/api/health", (_req, res) => {
+    res.json({ ok: true, tomData: TOM_DATA });
+  });
+
+  app.get("/api/pending", (_req, res) => {
+    res.json({
+      ok: !pending.parseError,
+      pending: {
+        fileName: pending.fileName,
+        mtimeMs: pending.mtimeMs,
+        payload: pending.payload,
+        parseError: pending.parseError,
+      },
+    });
+  });
+
+  app.use(express.static(UI_DIR));
+
+  const watcher = chokidar.watch(path.join(TOM_DATA, "*.tdf"), {
+    ignoreInitial: true,
+    awaitWriteFinish: { stabilityThreshold: 400, pollInterval: 100 },
+  });
+
+  let debounce = null;
+  const schedule = (absPath) => {
+    if (debounce) clearTimeout(debounce);
+    debounce = setTimeout(() => {
+      debounce = null;
+      readAndIngest(absPath);
+    }, 300);
+  };
+
+  watcher.on("add", schedule);
+  watcher.on("change", schedule);
+
+  app.listen(PORT, () => {
+    if (!fs.existsSync(TOM_DATA)) {
+      console.warn("[tom-bridge] Carpeta TOM_DATA no existe:", TOM_DATA);
+      console.warn("[tom-bridge] Define TOM_DATA con la ruta correcta.");
+    } else {
+      bootstrapLatestTdf();
+    }
+    console.log(`[tom-bridge] UI+d API http://localhost:${PORT}`);
+    console.log(`[tom-bridge] Vigilando .tdf en raíz de: ${TOM_DATA}`);
+  });
+}
+
+main();

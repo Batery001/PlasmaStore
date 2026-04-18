@@ -1,0 +1,14 @@
+{
+  "name": "tom-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.mjs"
+  },
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "express": "^5.1.0",
+    "fast-xml-parser": "^5.2.1"
+  }
+}
