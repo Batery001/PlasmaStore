@@ -312,6 +312,9 @@ function main() {
     console.log(
       `[tom-bridge] Torneos: http://localhost:${PORT}/  | Tienda: http://localhost:${PORT}/tienda/`
     );
+    console.log(
+      "[tom-bridge] Tras actualizar el código, reinicia este proceso; si el panel admin no lista productos suele ser servidor antiguo en el mismo puerto."
+    );
     console.log(`[tom-bridge] Vigilando .tdf en raíz de: ${TOM_DATA}`);
   });
 }

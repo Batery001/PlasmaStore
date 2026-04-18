@@ -24,17 +24,27 @@ export function AdminProducts() {
   const [msg, setMsg] = useState<string | null>(null);
   const [rowMsg, setRowMsg] = useState<string | null>(null);
   const [rowErr, setRowErr] = useState<string | null>(null);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reload = async () => {
+    setLoadErr(null);
     const res = await fetch("/api/store/admin/products", { credentials: "include" });
+    const ct = res.headers.get("content-type") || "";
+    if (res.status === 404 && !ct.includes("application/json")) {
+      throw new Error(
+        "El servidor respondió 404 (HTML) en lugar de la API de admin: casi seguro tom-bridge sigue en una versión antigua. Cierra el proceso que usa el puerto 3847 y ejecuta de nuevo npm run start en la carpeta tom-bridge."
+      );
+    }
     const data = await parseResponseJson<{ error?: string; products?: Product[] }>(res);
-    if (!res.ok) throw new Error(data.error || "Error");
+    if (!res.ok) throw new Error(data.error || "Error al cargar el listado");
     setProducts(data.products || []);
   };
 
   useEffect(() => {
-    reload().catch(() => {});
+    reload().catch((e) => {
+      setLoadErr(e instanceof Error ? e.message : "No se pudo cargar el catálogo admin");
+    });
   }, []);
 
   async function onCreate(e: FormEvent) {
@@ -196,6 +206,7 @@ export function AdminProducts() {
 
       <div className={adminStyles.panelCard}>
         <h2>Listado de productos</h2>
+        {loadErr && <p className={adminStyles.error}>{loadErr}</p>}
         {rowErr && <p className={adminStyles.error}>{rowErr}</p>}
         {rowMsg && <p className={adminStyles.banner}>{rowMsg}</p>}
         <div className={adminStyles.tableWrap}>
