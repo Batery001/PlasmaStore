@@ -17,12 +17,35 @@
   const liveBanner = document.getElementById("liveBanner");
   const liveBannerText = document.getElementById("liveBannerText");
   const autoRefresh = document.getElementById("autoRefresh");
+  const adminNotice = document.getElementById("adminNotice");
+  const adminNoticeBody = document.getElementById("adminNoticeBody");
+  const btnOpenPreview = document.getElementById("btnOpenPreview");
+  const btnDismissNotice = document.getElementById("btnDismissNotice");
 
   /** @type {{ payload: object, fileName: string, source: 'html' | 'tdf' } | null} */
   let state = null;
 
   let liveTomDataPath = "";
   let lastLiveKey = "";
+
+  /** @type {{ fileName: string; mtimeMs: number; payload: object } | null} */
+  let lastPendingSnapshot = null;
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function formatSavedAt(mtimeMs) {
+    try {
+      return new Date(mtimeMs).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" });
+    } catch {
+      return String(mtimeMs);
+    }
+  }
 
   function show(el, on) {
     el.classList.toggle("hidden", !on);
@@ -130,6 +153,7 @@
 
     if (payload.source === "tdf") {
       items.push(["Origen", `Archivo .tdf (TOM v${payload.tomVersion || "?"})`]);
+      items.push(["Fecha del evento (TOM)", payload.tournamentStartDate || "—"]);
       items.push(["Rondas", payload.roundLabel || "—"]);
     } else {
       items.push(["Clasificación (informe)", payload.roundLabel || "—"]);
@@ -310,6 +334,21 @@
     show(toast, false);
   });
 
+  btnDismissNotice.addEventListener("click", () => {
+    show(adminNotice, false);
+  });
+
+  btnOpenPreview.addEventListener("click", () => {
+    if (!lastPendingSnapshot || !lastPendingSnapshot.payload) return;
+    const p = lastPendingSnapshot;
+    const ok = applyPayload({ ...p.payload, source: "tdf" }, p.fileName, "tdf");
+    if (!ok) {
+      finalWarn.textContent = "El .tdf no tiene standings con top 4 reconocibles.";
+      show(finalWarn, true);
+      show(metaPanel, true);
+    }
+  });
+
   btnConfirm.addEventListener("click", () => {
     if (!state) return;
     const body = { ...state.payload, publishedAt: new Date().toISOString(), dryRun: true };
@@ -328,6 +367,7 @@
       show(liveBanner, true);
       liveBannerText.textContent = `Watcher activo. Leyendo cambios en la raíz de: ${liveTomDataPath}`;
       modeBadge.textContent = "Modo watcher (.tdf)";
+      show(adminNotice, false);
       pollLoop();
     } catch {
       modeBadge.textContent = "Modo prueba (solo HTML)";
@@ -349,9 +389,16 @@
         if (key === lastLiveKey) continue;
         lastLiveKey = key;
 
-        if (!autoRefresh.checked) continue;
+        show(adminNotice, true);
+        const savedAt = formatSavedAt(p.mtimeMs);
 
         if (p.parseError) {
+          lastPendingSnapshot = null;
+          adminNoticeBody.innerHTML = `Error al leer <strong>${escapeHtml(p.fileName)}</strong>.<br><strong>Guardado en disco:</strong> ${escapeHtml(
+            savedAt
+          )}<br><br>${escapeHtml(p.parseError)}`;
+          show(btnOpenPreview, false);
+
           state = null;
           btnConfirm.disabled = true;
           show(metaPanel, true);
@@ -372,10 +419,27 @@
 
         if (!p.payload) continue;
 
-        const ok = applyPayload({ ...p.payload, source: "tdf" }, p.fileName, "tdf");
-        if (!ok) {
-          finalWarn.textContent = "El .tdf no tiene standings con top 4 reconocibles.";
-          show(finalWarn, true);
+        lastPendingSnapshot = {
+          fileName: p.fileName,
+          mtimeMs: p.mtimeMs,
+          payload: p.payload,
+        };
+
+        const tName = p.payload.tournamentName || "—";
+        const tStart = p.payload.tournamentStartDate || "—";
+        adminNoticeBody.innerHTML = `Hay una actualización del torneo <strong>${escapeHtml(tName)}</strong>.<br><strong>Fecha del evento (TOM):</strong> ${escapeHtml(
+          tStart
+        )}<br><strong>Archivo:</strong> ${escapeHtml(p.fileName)} · <strong>Guardado en disco:</strong> ${escapeHtml(savedAt)}`;
+
+        if (autoRefresh.checked) {
+          show(btnOpenPreview, false);
+          const ok = applyPayload({ ...p.payload, source: "tdf" }, p.fileName, "tdf");
+          if (!ok) {
+            finalWarn.textContent = "El .tdf no tiene standings con top 4 reconocibles.";
+            show(finalWarn, true);
+          }
+        } else {
+          show(btnOpenPreview, true);
         }
       } catch {
         /* ignorar cortes de red locales */

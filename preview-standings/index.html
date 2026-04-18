@@ -16,7 +16,7 @@
         <h1 class="title">Preview de clasificación</h1>
         <p class="subtitle">
           <strong>Modo manual:</strong> arrastra un <code>*standings.html</code>.
-          <strong>Modo watcher:</strong> ejecuta <code>npm start</code> en <code>tom-bridge</code> y abre esta misma página por <code>http://localhost:3847</code> para leer el último <code>.tdf</code> de la raíz de <code>TOM_DATA</code>.
+          <strong>Modo watcher:</strong> ejecuta <code>npm start</code> en <code>tom-bridge</code> y abre esta misma página por <code>http://localhost:3847</code> para leer el último <code>.tdf</code> de la raíz de <code>TOM_DATA</code>. Cuando cambie el archivo, verás un <strong>aviso de administración</strong> (torneo, fecha del evento y hora del guardado).
           Nada se envía a internet.
         </p>
       </div>
@@ -32,6 +32,15 @@
         <input type="checkbox" id="autoRefresh" checked />
         Auto-actualizar vista cuando cambie el <code>.tdf</code>
       </label>
+    </section>
+
+    <section class="panel admin-notice hidden" id="adminNotice" role="status" aria-live="polite">
+      <h2 class="admin-notice__title">Administración — aviso</h2>
+      <p class="admin-notice__body" id="adminNoticeBody"></p>
+      <div class="admin-notice__actions">
+        <button type="button" class="btn btn--primary hidden" id="btnOpenPreview">Abrir vista previa</button>
+        <button type="button" class="btn btn--ghost" id="btnDismissNotice">Cerrar aviso</button>
+      </div>
     </section>
 
     <section class="panel dropzone" id="dropzone" aria-label="Zona para soltar el archivo HTML">

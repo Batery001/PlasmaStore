@@ -109,6 +109,31 @@ code {
   accent-color: var(--accent);
 }
 
+.admin-notice {
+  border-color: rgba(232, 168, 56, 0.45);
+  background: rgba(232, 168, 56, 0.1);
+}
+
+.admin-notice__title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+  color: #f2d9a2;
+}
+
+.admin-notice__body {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.admin-notice__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
 .badge {
   font-size: 0.75rem;
   font-weight: 600;

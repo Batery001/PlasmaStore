@@ -65,6 +65,7 @@ function parseTdf(xmlText, fileName) {
   }
 
   const tournamentName = String(root.data?.name ?? "").trim();
+  const tournamentStartDate = String(root.data?.startdate ?? "").trim();
   const tomVersion = root["@_version"] != null ? String(root["@_version"]) : "";
   const playerMap = buildPlayerMap(root);
 
@@ -124,6 +125,7 @@ function parseTdf(xmlText, fileName) {
     source: "tdf",
     sourceFile: fileName,
     tournamentName,
+    tournamentStartDate,
     tomVersion,
     roundCurrent: roundCount || null,
     roundTotal: roundCount || null,
