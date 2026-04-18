@@ -94,8 +94,8 @@
 .textarea {
   padding: 0.55rem 0.75rem;
   border-radius: 10px;
-  border: 1px solid var(--border);
-  background: #0f1318;
+  border: 1px solid var(--border-soft);
+  background: #08050e;
   color: var(--text);
   font-size: 1rem;
 }
@@ -117,9 +117,9 @@
 }
 
 .banner {
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  color: #fcd34d;
+  background: rgba(91, 33, 182, 0.28);
+  border: 1px solid var(--border-soft);
+  color: var(--ice);
   padding: 0.65rem 0.85rem;
   border-radius: 10px;
   font-size: 0.92rem;
@@ -131,13 +131,14 @@
   justify-content: center;
   padding: 0.65rem 1.2rem;
   border-radius: 10px;
-  border: none;
-  background: linear-gradient(180deg, var(--accent), var(--accent-dim));
-  color: #0c0a09;
+  border: 1px solid rgba(167, 139, 250, 0.5);
+  background: linear-gradient(180deg, #7c3aed, #4c1d95);
+  color: var(--ice);
   font-weight: 800;
   font-size: 0.95rem;
   cursor: pointer;
   text-decoration: none;
+  box-shadow: 0 4px 20px rgba(91, 33, 182, 0.45);
 }
 
 .btnPrimary:disabled {
@@ -173,12 +174,13 @@
 
 .card {
   background: var(--card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-soft);
   border-radius: 14px;
   padding: 1.1rem 1.15rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
 }
 
 .cardTitle {
@@ -196,7 +198,7 @@
 .price {
   font-weight: 800;
   font-size: 1.1rem;
-  color: var(--accent);
+  color: var(--ice);
   margin: 0;
 }
 
@@ -299,8 +301,12 @@
 }
 
 .storeIntroLead a {
-  color: #93c5fd;
+  color: var(--link);
   font-weight: 600;
+}
+
+.storeIntroLead strong {
+  color: var(--accent-strong);
 }
 
 .inlineCode {
@@ -371,8 +377,8 @@
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
   border-radius: 16px;
-  border: 1px solid var(--border);
-  background: linear-gradient(180deg, #121820, #0e1218);
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(165deg, #1a0a2e 0%, #0c0614 55%, #050308 100%);
   scrollbar-width: none;
 }
 
@@ -410,9 +416,10 @@
   aspect-ratio: 4 / 3;
   max-height: 200px;
   border-radius: 14px;
-  background: radial-gradient(circle at 30% 30%, rgba(245, 158, 11, 0.25), transparent 55%),
-    linear-gradient(145deg, #1e293b, #0f172a);
-  border: 1px solid var(--border);
+  background: radial-gradient(circle at 28% 22%, rgba(196, 181, 253, 0.35), transparent 52%),
+    radial-gradient(circle at 80% 80%, rgba(91, 33, 182, 0.55), transparent 45%),
+    linear-gradient(145deg, #2e1065, #0f0720);
+  border: 1px solid var(--border-soft);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -447,7 +454,7 @@
   margin: 0;
   font-size: 1.35rem;
   font-weight: 800;
-  color: var(--accent);
+  color: var(--ice);
 }
 
 .carouselDots {
@@ -481,8 +488,9 @@
   height: 120px;
   border-radius: 12px;
   margin-bottom: 0.65rem;
-  background: linear-gradient(145deg, #1e293b, #0f172a);
-  border: 1px solid var(--border);
+  background: radial-gradient(circle at 40% 30%, rgba(167, 139, 250, 0.3), transparent 55%),
+    linear-gradient(145deg, #2e1065, #0a0512);
+  border: 1px solid var(--border-soft);
   display: flex;
   align-items: center;
   justify-content: center;

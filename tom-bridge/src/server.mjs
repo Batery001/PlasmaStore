@@ -282,7 +282,7 @@ function main() {
       res.sendFile(path.join(STORE_DIST, "index.html"));
     });
   } else {
-    console.warn("[tom-bridge] Trejotienda: ejecuta `npm run build` en la carpeta /trejotienda para servir /tienda/");
+    console.warn("[tom-bridge] Plasma Store: ejecuta `npm run build` en la carpeta /trejotienda para servir /tienda/");
   }
 
   const watcher = chokidar.watch(path.join(TOM_DATA, "*.tdf"), {

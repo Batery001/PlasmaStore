@@ -92,12 +92,14 @@ export function Home() {
     <div>
       <section className={styles.storeIntro}>
         <div>
-          <p className={styles.kicker}>Trejotienda</p>
-          <h1 className={styles.storeIntroTitle}>Cartas, sobres y accesorios</h1>
+          <p className={styles.kicker}>Team Plasma</p>
+          <h1 className={styles.storeIntroTitle}>Plasma Store</h1>
           <p className={styles.storeIntroLead}>
-            Navega el catálogo, usa el carrusel de destacados y añade al carrito.{" "}
-            <Link to="/registro">Crear cuenta</Link> · admin demo:{" "}
-            <code className={styles.inlineCode}>admin@tienda.local</code> / <code className={styles.inlineCode}>admin123</code>
+            Cartas Pokémon, sobres y accesorios. Precios en <strong>CLP</strong>. Carrusel de destacados y catálogo
+            completo. <Link to="/registro">Crear cuenta</Link> · admin demo:{" "}
+            <code className={styles.inlineCode}>admin@plasmastore.local</code> (o{" "}
+            <code className={styles.inlineCode}>admin@tienda.local</code>) /{" "}
+            <code className={styles.inlineCode}>admin123</code>
           </p>
         </div>
         <div className={styles.storeIntroActions}>

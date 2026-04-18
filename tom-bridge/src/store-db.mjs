@@ -68,14 +68,15 @@ function seedIfEmpty(database) {
     for (const r of rows) ins.run(r[0], r[1], r[2], r[3]);
   }
 
-  const adminEmail = "admin@tienda.local";
-  const row = database.prepare("SELECT id FROM users WHERE email = ? COLLATE NOCASE").get(adminEmail);
-  if (!row) {
-    const hash = bcrypt.hashSync("admin123", 10);
-    database
-      .prepare(
-        "INSERT INTO users (email, password_hash, name, role) VALUES (?,?,?,?)"
-      )
-      .run(adminEmail, hash, "Administración", "admin");
+  const hash = bcrypt.hashSync("admin123", 10);
+  const admins = [
+    ["admin@plasmastore.local", "Plasma Admin"],
+    ["admin@tienda.local", "Admin (legado)"],
+  ];
+  for (const [email, name] of admins) {
+    const exists = database.prepare("SELECT id FROM users WHERE email = ? COLLATE NOCASE").get(email);
+    if (!exists) {
+      database.prepare("INSERT INTO users (email, password_hash, name, role) VALUES (?,?,?,?)").run(email, hash, name, "admin");
+    }
   }
 }

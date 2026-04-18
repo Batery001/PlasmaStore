@@ -9,7 +9,7 @@ export function Layout() {
     <div className={styles.shell}>
       <header className={styles.header}>
         <Link to="/" className={styles.brand}>
-          Trejotienda
+          Plasma Store
         </Link>
         <nav className={styles.nav}>
           <Link to="/">Inicio</Link>
@@ -39,7 +39,7 @@ export function Layout() {
         <Outlet />
       </main>
       <footer className={styles.footer}>
-        Demo local · precios de ejemplo ·{" "}
+        Plasma Store · precios en CLP (demo) ·{" "}
         <a href="/">Torneos (standing)</a>
       </footer>
     </div>

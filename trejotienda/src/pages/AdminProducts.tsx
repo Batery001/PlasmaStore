@@ -36,9 +36,9 @@ export function AdminProducts() {
   async function onCreate(e: FormEvent) {
     e.preventDefault();
     setMsg(null);
-    const price_cents = Math.round(parseFloat(price.replace(",", ".")) * 100);
+    const price_cents = Math.round(parseFloat(price.replace(",", ".")));
     if (!Number.isFinite(price_cents) || price_cents < 0) {
-      setMsg("Precio inválido (usa pesos, ej. 4990)");
+      setMsg("Precio inválido: ingresa pesos CLP enteros (ej. 5990).");
       return;
     }
     const res = await fetch("/api/store/admin/products", {
@@ -68,7 +68,7 @@ export function AdminProducts() {
   return (
     <div>
       <h1 className={styles.pageTitle}>Admin — productos</h1>
-      <p className={styles.muted}>Alta rápida de productos (solo rol admin).</p>
+      <p className={styles.muted}>Alta rápida de productos (solo rol admin). Todos los precios son en CLP.</p>
 
       <form className={styles.formCard} onSubmit={onCreate}>
         <h2 className={styles.subTitle}>Nuevo producto</h2>
@@ -81,8 +81,8 @@ export function AdminProducts() {
           <textarea className={styles.textarea} value={description} onChange={(e) => setDescription(e.target.value)} />
         </label>
         <label className={styles.label}>
-          Precio (CLP, sin decimales)
-          <input className={styles.input} value={price} onChange={(e) => setPrice(e.target.value)} placeholder="4990" required />
+          Precio en CLP (pesos enteros, ej. 5990)
+          <input className={styles.input} value={price} onChange={(e) => setPrice(e.target.value)} placeholder="5990" required />
         </label>
         <label className={styles.label}>
           Stock inicial

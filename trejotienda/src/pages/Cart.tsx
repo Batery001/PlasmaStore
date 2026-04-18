@@ -97,9 +97,11 @@ export function Cart() {
             ))}
           </ul>
           <p className={styles.total}>
-            Total estimado: <strong>{formatCLP(total)}</strong>
+            Total estimado (CLP): <strong>{formatCLP(total)}</strong>
           </p>
-          <p className={styles.muted}>Demo: no hay pasarela de pago. En tienda real conectarías checkout aquí.</p>
+          <p className={styles.muted}>
+            Todos los montos están en pesos chilenos (CLP). Demo: sin pasarela de pago.
+          </p>
         </>
       )}
     </div>
