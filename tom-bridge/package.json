@@ -12,7 +12,8 @@
     "chokidar": "^4.0.3",
     "express": "^5.1.0",
     "express-session": "^1.19.0",
-    "fast-xml-parser": "^5.2.1"
+    "fast-xml-parser": "^5.2.1",
+    "multer": "^2.1.1"
   },
   "devDependencies": {
     "@types/express-session": "^1.19.0"

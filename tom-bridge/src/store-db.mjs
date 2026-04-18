@@ -10,6 +10,16 @@ const DB_PATH = path.join(DATA_DIR, "store.db");
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
+/** Catálogo demo: se insertan si la tabla estaba vacía; también se rellenan nombres que falten (BD antigua). */
+export const DEFAULT_STORE_PRODUCTS = [
+  ["Booster Obsidian Flames", "Sobre en inglés — 10 cartas.", 5990, 40],
+  ["Elite Trainer Box 151", "Caja ETB edición especial.", 89990, 5],
+  ["Protectores estándar (64 u.)", "Fundas transparentes tamaño estándar.", 4990, 120],
+  ["Deck box magnético", "Caja rígida con cierre magnético.", 12990, 25],
+  ["Tapete oficial", "Tapete de juego 60×35 cm.", 24990, 8],
+  ["Pack 3 sobres promoción", "Promo tienda — surtido.", 7990, 60],
+];
+
 /** @type {import('better-sqlite3').Database | null} */
 let db = null;
 /** Evita repetir bcrypt si getStoreDb() se llama más de una vez */
@@ -47,6 +57,7 @@ export function getStoreDb() {
     );
   `);
     seedIfEmpty(db);
+    ensureDefaultProducts(db);
   }
   if (!plasmaAdminEnsured) {
     ensurePlasmaAdmin(db);
@@ -64,15 +75,21 @@ function seedIfEmpty(database) {
     const ins = database.prepare(
       "INSERT INTO products (name, description, price_cents, stock, active) VALUES (?,?,?,?,1)"
     );
-    const rows = [
-      ["Booster Obsidian Flames", "Sobre en inglés — 10 cartas.", 5990, 40],
-      ["Elite Trainer Box 151", "Caja ETB edición especial.", 89990, 5],
-      ["Protectores estándar (64 u.)", "Fundas transparentes tamaño estándar.", 4990, 120],
-      ["Deck box magnético", "Caja rígida con cierre magnético.", 12990, 25],
-      ["Tapete oficial", "Tapete de juego 60×35 cm.", 24990, 8],
-      ["Pack 3 sobres promoción", "Promo tienda — surtido.", 7990, 60],
-    ];
-    for (const r of rows) ins.run(r[0], r[1], r[2], r[3]);
+    for (const r of DEFAULT_STORE_PRODUCTS) ins.run(r[0], r[1], r[2], r[3]);
+  }
+}
+
+/**
+ * Si la BD ya tenía productos distintos, igual añade los del catálogo demo que falten (por nombre).
+ * @param {import('better-sqlite3').Database} database
+ */
+function ensureDefaultProducts(database) {
+  const ins = database.prepare(
+    "INSERT INTO products (name, description, price_cents, stock, active) VALUES (?,?,?,?,1)"
+  );
+  const exists = database.prepare("SELECT 1 FROM products WHERE name = ? COLLATE NOCASE LIMIT 1");
+  for (const r of DEFAULT_STORE_PRODUCTS) {
+    if (!exists.get(r[0])) ins.run(r[0], r[1], r[2], r[3]);
   }
 }
 

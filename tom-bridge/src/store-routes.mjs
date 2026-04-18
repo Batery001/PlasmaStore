@@ -1,14 +1,76 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import bcrypt from "bcryptjs";
+import express from "express";
+import multer from "multer";
 import session from "express-session";
 import { getStoreDb } from "./store-db.mjs";
 
 const SESSION_SECRET = process.env.SESSION_SECRET || "trejotienda-dev-cambia-en-produccion";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const STORE_UPLOAD_ROOT = path.join(__dirname, "..", "data", "store-uploads");
+const PRODUCTS_UPLOAD_DIR = path.join(STORE_UPLOAD_ROOT, "products");
+fs.mkdirSync(PRODUCTS_UPLOAD_DIR, { recursive: true });
+
+/**
+ * @param {string | null | undefined} imageUrl
+ */
+function deleteStoredImageFile(imageUrl) {
+  if (!imageUrl || typeof imageUrl !== "string") return;
+  const trimmed = imageUrl.trim();
+  if (!trimmed.startsWith("/store-media/")) return;
+  const rel = trimmed.slice("/store-media/".length);
+  const abs = path.join(STORE_UPLOAD_ROOT, rel);
+  if (!abs.startsWith(STORE_UPLOAD_ROOT)) return;
+  try {
+    if (fs.existsSync(abs)) fs.unlinkSync(abs);
+  } catch {
+    /* ignore */
+  }
+}
+
+const uploadProductImage = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, PRODUCTS_UPLOAD_DIR),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname || "").toLowerCase();
+      const ok = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif"];
+      const e = ok.includes(ext) ? ext : ".jpg";
+      cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 12)}${e}`);
+    },
+  }),
+  limits: { fileSize: 4 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (/^image\/(jpeg|png|gif|webp|avif)$/i.test(file.mimetype)) cb(null, true);
+    else cb(new Error("Solo imágenes JPEG, PNG, GIF, WebP o AVIF."));
+  },
+});
+
+/**
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+function optionalProductImageUpload(req, res, next) {
+  const ct = String(req.headers["content-type"] || "");
+  if (ct.includes("multipart/form-data")) {
+    return uploadProductImage.single("image")(req, res, (err) => {
+      if (err) return res.status(400).json({ ok: false, error: err.message || "Archivo inválido." });
+      next();
+    });
+  }
+  next();
+}
 
 /**
  * @param {import('express').Express} app
  */
 export function mountStoreAndSession(app) {
   const db = getStoreDb();
+
+  app.use("/store-media", express.static(STORE_UPLOAD_ROOT));
 
   app.use(
     session({
@@ -241,57 +303,84 @@ export function mountStoreAndSession(app) {
     res.json({ ok: true, products: rows });
   });
 
-  app.patch("/api/store/admin/products/:id", requireAuth, requireAdmin, (req, res) => {
-    const id = parseInt(req.params.id, 10);
-    if (!Number.isFinite(id) || id < 1) {
-      return res.status(400).json({ ok: false, error: "id inválido." });
-    }
-    const row = db.prepare("SELECT id FROM products WHERE id = ?").get(id);
-    if (!row) return res.status(404).json({ ok: false, error: "Producto no encontrado." });
+  app.patch(
+    "/api/store/admin/products/:id",
+    requireAuth,
+    requireAdmin,
+    optionalProductImageUpload,
+    (req, res) => {
+      const id = parseInt(req.params.id, 10);
+      if (!Number.isFinite(id) || id < 1) {
+        return res.status(400).json({ ok: false, error: "id inválido." });
+      }
+      const prevRow = db.prepare("SELECT id, image_url FROM products WHERE id = ?").get(id);
+      if (!prevRow) return res.status(404).json({ ok: false, error: "Producto no encontrado." });
 
-    const fields = [];
-    const vals = [];
-    if (req.body.name !== undefined) {
-      const name = String(req.body.name).trim();
-      if (!name) return res.status(400).json({ ok: false, error: "Nombre vacío." });
-      fields.push("name = ?");
-      vals.push(name);
-    }
-    if (req.body.description !== undefined) {
-      fields.push("description = ?");
-      vals.push(String(req.body.description));
-    }
-    if (req.body.price_cents !== undefined) {
-      const price_cents = parseInt(String(req.body.price_cents), 10);
-      if (!Number.isFinite(price_cents) || price_cents < 0) {
-        return res.status(400).json({ ok: false, error: "Precio inválido." });
+      const fields = [];
+      const vals = [];
+      if (req.body?.name !== undefined) {
+        const name = String(req.body.name).trim();
+        if (!name) return res.status(400).json({ ok: false, error: "Nombre vacío." });
+        fields.push("name = ?");
+        vals.push(name);
       }
-      fields.push("price_cents = ?");
-      vals.push(price_cents);
-    }
-    if (req.body.stock !== undefined) {
-      const stock = parseInt(String(req.body.stock), 10);
-      if (!Number.isFinite(stock) || stock < 0) {
-        return res.status(400).json({ ok: false, error: "Stock inválido." });
+      if (req.body?.description !== undefined) {
+        fields.push("description = ?");
+        vals.push(String(req.body.description));
       }
-      fields.push("stock = ?");
-      vals.push(stock);
+      if (req.body?.price_cents !== undefined) {
+        const price_cents = parseInt(String(req.body.price_cents), 10);
+        if (!Number.isFinite(price_cents) || price_cents < 0) {
+          return res.status(400).json({ ok: false, error: "Precio inválido." });
+        }
+        fields.push("price_cents = ?");
+        vals.push(price_cents);
+      }
+      if (req.body?.stock !== undefined) {
+        const stock = parseInt(String(req.body.stock), 10);
+        if (!Number.isFinite(stock) || stock < 0) {
+          return res.status(400).json({ ok: false, error: "Stock inválido." });
+        }
+        fields.push("stock = ?");
+        vals.push(stock);
+      }
+      if (req.body?.active !== undefined) {
+        const active = req.body.active === true || req.body.active === 1 || req.body.active === "1" ? 1 : 0;
+        fields.push("active = ?");
+        vals.push(active);
+      }
+
+      if (req.file) {
+        if (prevRow.image_url) deleteStoredImageFile(prevRow.image_url);
+        fields.push("image_url = ?");
+        vals.push(`/store-media/products/${req.file.filename}`);
+      } else if (req.body?.clear_image === true || req.body?.clear_image === "1") {
+        if (prevRow.image_url) deleteStoredImageFile(prevRow.image_url);
+        fields.push("image_url = ?");
+        vals.push(null);
+      } else if (req.body?.image_url !== undefined && !req.file) {
+        const raw = req.body.image_url;
+        if (raw === null || raw === "") {
+          if (prevRow.image_url) deleteStoredImageFile(prevRow.image_url);
+          fields.push("image_url = ?");
+          vals.push(null);
+        } else {
+          fields.push("image_url = ?");
+          vals.push(String(raw).trim());
+        }
+      }
+
+      if (fields.length === 0) {
+        return res.status(400).json({ ok: false, error: "Nada que actualizar." });
+      }
+      vals.push(id);
+      db.prepare(`UPDATE products SET ${fields.join(", ")} WHERE id = ?`).run(...vals);
+      const product = db
+        .prepare("SELECT id, name, description, price_cents, image_url, stock, active FROM products WHERE id = ?")
+        .get(id);
+      res.json({ ok: true, product });
     }
-    if (req.body.active !== undefined) {
-      const active = req.body.active === true || req.body.active === 1 || req.body.active === "1" ? 1 : 0;
-      fields.push("active = ?");
-      vals.push(active);
-    }
-    if (fields.length === 0) {
-      return res.status(400).json({ ok: false, error: "Nada que actualizar." });
-    }
-    vals.push(id);
-    db.prepare(`UPDATE products SET ${fields.join(", ")} WHERE id = ?`).run(...vals);
-    const product = db
-      .prepare("SELECT id, name, description, price_cents, image_url, stock, active FROM products WHERE id = ?")
-      .get(id);
-    res.json({ ok: true, product });
-  });
+  );
 
   app.get("/api/store/admin/carts", requireAuth, requireAdmin, (_req, res) => {
     const usersWithCart = db
@@ -367,7 +456,7 @@ export function mountStoreAndSession(app) {
     res.json({ ok: true, changes: r.changes });
   });
 
-  app.post("/api/store/admin/products", requireAuth, requireAdmin, (req, res) => {
+  app.post("/api/store/admin/products", requireAuth, requireAdmin, optionalProductImageUpload, (req, res) => {
     const name = String(req.body?.name || "").trim();
     const description = String(req.body?.description || "").trim();
     const price_cents = parseInt(String(req.body?.price_cents), 10);
@@ -376,11 +465,23 @@ export function mountStoreAndSession(app) {
     if (!Number.isFinite(price_cents) || price_cents < 0) {
       return res.status(400).json({ ok: false, error: "Precio inválido (price_cents)." });
     }
+    let image_url = null;
+    if (req.file) {
+      image_url = `/store-media/products/${req.file.filename}`;
+    } else if (req.body?.image_url != null && String(req.body.image_url).trim() !== "") {
+      image_url = String(req.body.image_url).trim();
+    }
     const info = db
       .prepare(
-        "INSERT INTO products (name, description, price_cents, stock, active) VALUES (?,?,?,?,1)"
+        "INSERT INTO products (name, description, price_cents, stock, active, image_url) VALUES (?,?,?,?,1,?)"
       )
-      .run(name, description, price_cents, Number.isFinite(stock) && stock >= 0 ? stock : 0);
+      .run(
+        name,
+        description,
+        price_cents,
+        Number.isFinite(stock) && stock >= 0 ? stock : 0,
+        image_url
+      );
     const product = db
       .prepare(
         "SELECT id, name, description, price_cents, image_url, stock, active FROM products WHERE id = ?"

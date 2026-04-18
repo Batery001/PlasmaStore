@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { resolveStoreMediaUrl } from "../lib/media";
 import { formatCLP } from "../lib/money";
 import { useAuth } from "../auth/AuthContext";
 import styles from "./pages.module.css";
@@ -10,6 +11,7 @@ type Product = {
   description: string;
   price_cents: number;
   stock: number;
+  image_url?: string | null;
 };
 
 const CAROUSEL_MAX = 6;
@@ -146,7 +148,15 @@ export function Home() {
                   <div key={p.id} className={styles.carouselSlide}>
                     <div className={styles.carouselCard}>
                       <div className={styles.carouselVisual} aria-hidden>
-                        <span className={styles.carouselGlyph}>🃏</span>
+                        {resolveStoreMediaUrl(p.image_url) ? (
+                          <img
+                            className={styles.carouselImage}
+                            src={resolveStoreMediaUrl(p.image_url)}
+                            alt=""
+                          />
+                        ) : (
+                          <span className={styles.carouselGlyph}>🃏</span>
+                        )}
                       </div>
                       <div className={styles.carouselBody}>
                         <h3 className={styles.carouselName}>{p.name}</h3>
@@ -192,7 +202,11 @@ export function Home() {
           {products.map((p) => (
             <article key={p.id} className={styles.card}>
               <div className={styles.cardThumb} aria-hidden>
-                <span>🎴</span>
+                {resolveStoreMediaUrl(p.image_url) ? (
+                  <img className={styles.cardImage} src={resolveStoreMediaUrl(p.image_url)} alt="" />
+                ) : (
+                  <span>🎴</span>
+                )}
               </div>
               <h2 className={styles.cardTitle}>{p.name}</h2>
               <p className={styles.cardDesc}>{p.description}</p>
