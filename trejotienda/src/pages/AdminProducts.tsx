@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { resolveStoreMediaUrl } from "../lib/media";
+import { parseResponseJson } from "../lib/parseResponseJson";
 import adminStyles from "../admin/admin.module.css";
 
 type Product = {
@@ -27,7 +28,7 @@ export function AdminProducts() {
 
   const reload = async () => {
     const res = await fetch("/api/store/admin/products", { credentials: "include" });
-    const data = await res.json();
+    const data = await parseResponseJson<{ error?: string; products?: Product[] }>(res);
     if (!res.ok) throw new Error(data.error || "Error");
     setProducts(data.products || []);
   };
@@ -56,7 +57,7 @@ export function AdminProducts() {
       credentials: "include",
       body: fd,
     });
-    const data = await res.json();
+    const data = await parseResponseJson<{ error?: string; product?: { name?: string } }>(res);
     if (!res.ok) {
       setMsg(data.error || "Error");
       return;
@@ -91,7 +92,7 @@ export function AdminProducts() {
       credentials: "include",
       body: JSON.stringify(body),
     });
-    const data = await res.json();
+    const data = await parseResponseJson<{ error?: string }>(res);
     if (!res.ok) {
       setRowErr(data.error || "Error al guardar");
       return;
@@ -277,7 +278,7 @@ function ProductRow({
       credentials: "include",
       body: fd,
     });
-    const data = await res.json();
+    const data = await parseResponseJson<{ error?: string }>(res);
     if (!res.ok) {
       alert(data.error || "No se pudo subir la imagen");
       return;

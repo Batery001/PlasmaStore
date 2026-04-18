@@ -1,5 +1,6 @@
 import { FormEvent, Fragment, useEffect, useState } from "react";
 import { formatCLP } from "../lib/money";
+import { parseResponseJson } from "../lib/parseResponseJson";
 import adminStyles from "../admin/admin.module.css";
 
 type CartItem = {
@@ -30,7 +31,7 @@ export function AdminCarts() {
 
   const reload = async () => {
     const res = await fetch("/api/store/admin/carts", { credentials: "include" });
-    const data = await res.json();
+    const data = await parseResponseJson<{ error?: string; carts?: CartRow[] }>(res);
     if (!res.ok) throw new Error(data.error || "Error");
     setCarts(data.carts || []);
   };
@@ -47,7 +48,7 @@ export function AdminCarts() {
       method: "DELETE",
       credentials: "include",
     });
-    const data = await res.json();
+    const data = await parseResponseJson<{ error?: string; removed?: number }>(res);
     if (!res.ok) {
       setErr(data.error || "Error");
       return;
@@ -65,7 +66,7 @@ export function AdminCarts() {
       credentials: "include",
       body: JSON.stringify({ userId, productId, quantity }),
     });
-    const data = await res.json();
+    const data = await parseResponseJson<{ error?: string }>(res);
     if (!res.ok) {
       setErr(data.error || "Error");
       return;

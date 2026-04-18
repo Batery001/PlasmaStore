@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { parseResponseJson } from "../lib/parseResponseJson";
 import styles from "./pages.module.css";
 
 export function Register() {
@@ -23,7 +24,7 @@ export function Register() {
         credentials: "include",
         body: JSON.stringify({ name, email, password }),
       });
-      const data = await res.json();
+      const data = await parseResponseJson<{ error?: string }>(res);
       if (!res.ok) throw new Error(data.error || "No se pudo registrar");
       await refresh();
       nav("/");

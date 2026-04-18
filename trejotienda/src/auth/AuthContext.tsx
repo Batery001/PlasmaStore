@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { parseResponseJson } from "../lib/parseResponseJson";
 
 export type StoreUser = {
   id: number;
@@ -28,9 +29,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<StoreUser | null | undefined>(undefined);
 
   const refresh = useCallback(async () => {
-    const res = await fetch("/api/store/me", { credentials: "include" });
-    const data = await res.json();
-    setUser(data.user ?? null);
+    try {
+      const res = await fetch("/api/store/me", { credentials: "include" });
+      const data = await parseResponseJson<{ user?: StoreUser | null }>(res);
+      setUser(data.user ?? null);
+    } catch (e) {
+      console.warn("[Plasma Store]", e instanceof Error ? e.message : e);
+      setUser(null);
+    }
   }, []);
 
   useEffect(() => {

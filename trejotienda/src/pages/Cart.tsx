@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { formatCLP } from "../lib/money";
+import { parseResponseJson } from "../lib/parseResponseJson";
 import { useAuth } from "../auth/AuthContext";
 import styles from "./pages.module.css";
 
@@ -17,13 +18,17 @@ export function Cart() {
   const [items, setItems] = useState<Line[]>([]);
 
   const reload = useCallback(async () => {
-    const res = await fetch("/api/store/cart", { credentials: "include" });
-    if (!res.ok) {
+    try {
+      const res = await fetch("/api/store/cart", { credentials: "include" });
+      if (!res.ok) {
+        setItems([]);
+        return;
+      }
+      const data = await parseResponseJson<{ items?: Line[] }>(res);
+      setItems(data.items || []);
+    } catch {
       setItems([]);
-      return;
     }
-    const data = await res.json();
-    setItems(data.items || []);
   }, []);
 
   useEffect(() => {

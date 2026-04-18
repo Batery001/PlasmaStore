@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { parseResponseJson } from "../lib/parseResponseJson";
 import styles from "./pages.module.css";
 
 type LoginLocationState = { from?: { pathname: string } };
@@ -26,7 +27,7 @@ export function Login() {
         credentials: "include",
         body: JSON.stringify({ email: loginId.trim(), password }),
       });
-      const data = await res.json();
+      const data = await parseResponseJson<{ ok?: boolean; error?: string }>(res);
       if (!res.ok) throw new Error(data.error || "Error al entrar");
       await refresh();
       nav(from, { replace: true });

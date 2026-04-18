@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { resolveStoreMediaUrl } from "../lib/media";
+import { parseResponseJson } from "../lib/parseResponseJson";
 import { formatCLP } from "../lib/money";
 import { useAuth } from "../auth/AuthContext";
 import styles from "./pages.module.css";
@@ -27,8 +28,9 @@ export function Home() {
 
   useEffect(() => {
     fetch("/api/store/products")
-      .then((r) => r.json())
-      .then((d) => setProducts(d.products || []));
+      .then(async (r) => parseResponseJson<{ products?: Product[] }>(r))
+      .then((d) => setProducts(d.products || []))
+      .catch(() => setProducts([]));
   }, []);
 
   const featured = products.slice(0, Math.min(CAROUSEL_MAX, products.length));
@@ -82,7 +84,7 @@ export function Home() {
       credentials: "include",
       body: JSON.stringify({ productId: p.id, quantity: 1 }),
     });
-    const data = await res.json();
+    const data = await parseResponseJson<{ error?: string }>(res);
     if (!res.ok) {
       setMsg(data.error || "No se pudo agregar");
       return;

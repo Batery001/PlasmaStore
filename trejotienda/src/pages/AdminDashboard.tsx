@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { formatCLP } from "../lib/money";
+import { parseResponseJson } from "../lib/parseResponseJson";
 import adminStyles from "../admin/admin.module.css";
 
 type Stats = {
@@ -25,9 +26,9 @@ export function AdminDashboard() {
     (async () => {
       try {
         const res = await fetch("/api/store/admin/stats", { credentials: "include" });
-        const data = await res.json();
+        const data = await parseResponseJson<{ error?: string; stats?: Stats }>(res);
         if (!res.ok) throw new Error(data.error || "Error al cargar estadísticas");
-        if (!cancelled) setStats(data.stats);
+        if (!cancelled) setStats(data.stats ?? null);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Error");
       }
