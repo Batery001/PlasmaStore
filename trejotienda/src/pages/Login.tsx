@@ -6,7 +6,7 @@ import styles from "./pages.module.css";
 export function Login() {
   const { refresh } = useAuth();
   const nav = useNavigate();
-  const [email, setEmail] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -20,7 +20,7 @@ export function Login() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: loginId.trim(), password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error al entrar");
@@ -38,13 +38,13 @@ export function Login() {
       <h1 className={styles.pageTitle}>Entrar</h1>
       <form className={styles.form} onSubmit={onSubmit}>
         <label className={styles.label}>
-          Email
+          Usuario o email
           <input
             className={styles.input}
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            autoComplete="username"
+            value={loginId}
+            onChange={(e) => setLoginId(e.target.value)}
             required
           />
         </label>

@@ -96,10 +96,7 @@ export function Home() {
           <h1 className={styles.storeIntroTitle}>Plasma Store</h1>
           <p className={styles.storeIntroLead}>
             Cartas Pokémon, sobres y accesorios. Precios en <strong>CLP</strong>. Carrusel de destacados y catálogo
-            completo. <Link to="/registro">Crear cuenta</Link> · admin demo:{" "}
-            <code className={styles.inlineCode}>admin@plasmastore.local</code> (o{" "}
-            <code className={styles.inlineCode}>admin@tienda.local</code>) /{" "}
-            <code className={styles.inlineCode}>admin123</code>
+            completo. <Link to="/registro">Crear cuenta</Link>
           </p>
         </div>
         <div className={styles.storeIntroActions}>

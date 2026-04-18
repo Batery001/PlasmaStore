@@ -56,6 +56,9 @@ export function mountStoreAndSession(app) {
     if (!email || !email.includes("@")) {
       return res.status(400).json({ ok: false, error: "Email inválido." });
     }
+    if (email === "admin") {
+      return res.status(400).json({ ok: false, error: "Ese usuario está reservado." });
+    }
     if (password.length < 6) {
       return res.status(400).json({ ok: false, error: "La contraseña debe tener al menos 6 caracteres." });
     }
@@ -86,7 +89,7 @@ export function mountStoreAndSession(app) {
       .prepare("SELECT id, email, password_hash, name, role FROM users WHERE email = ? COLLATE NOCASE")
       .get(email);
     if (!row || !bcrypt.compareSync(password, row.password_hash)) {
-      return res.status(401).json({ ok: false, error: "Email o contraseña incorrectos." });
+      return res.status(401).json({ ok: false, error: "Usuario o contraseña incorrectos." });
     }
     req.session.userId = row.id;
     return res.json({

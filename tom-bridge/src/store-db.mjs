@@ -68,15 +68,24 @@ function seedIfEmpty(database) {
     for (const r of rows) ins.run(r[0], r[1], r[2], r[3]);
   }
 
+  ensurePlasmaAdmin(database);
+}
+
+/**
+ * Administrador por defecto: usuario `admin` (guardado en columna email), contraseña `admin123`.
+ * Se actualiza en cada arranque para mantener esa contraseña en entornos demo.
+ * @param {import('better-sqlite3').Database} database
+ */
+function ensurePlasmaAdmin(database) {
   const hash = bcrypt.hashSync("admin123", 10);
-  const admins = [
-    ["admin@plasmastore.local", "Plasma Admin"],
-    ["admin@tienda.local", "Admin (legado)"],
-  ];
-  for (const [email, name] of admins) {
-    const exists = database.prepare("SELECT id FROM users WHERE email = ? COLLATE NOCASE").get(email);
-    if (!exists) {
-      database.prepare("INSERT INTO users (email, password_hash, name, role) VALUES (?,?,?,?)").run(email, hash, name, "admin");
-    }
+  const row = database.prepare("SELECT id FROM users WHERE email = ? COLLATE NOCASE").get("admin");
+  if (row) {
+    database
+      .prepare("UPDATE users SET password_hash = ?, name = ?, role = ? WHERE id = ?")
+      .run(hash, "Plasma Admin", "admin", row.id);
+  } else {
+    database
+      .prepare("INSERT INTO users (email, password_hash, name, role) VALUES (?,?,?,?)")
+      .run("admin", hash, "Plasma Admin", "admin");
   }
 }
