@@ -65,7 +65,7 @@ export function Cart() {
       <h1 className={styles.pageTitle}>Carrito</h1>
       {items.length === 0 ? (
         <p className={styles.muted}>
-          Vacío. <Link to="/catalogo">Ir al catálogo</Link>
+          Vacío. <Link to="/">Seguir comprando</Link>
         </p>
       ) : (
         <>

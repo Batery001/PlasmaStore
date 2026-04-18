@@ -12,7 +12,7 @@ export function Layout() {
           Trejotienda
         </Link>
         <nav className={styles.nav}>
-          <Link to="/catalogo">Catálogo</Link>
+          <Link to="/">Inicio</Link>
           <Link to="/carrito">Carrito</Link>
           {user?.role === "admin" && <Link to="/admin/productos">Admin</Link>}
           {loading ? (

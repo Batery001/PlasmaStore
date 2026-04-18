@@ -270,3 +270,221 @@
 .adminList li {
   margin-bottom: 0.35rem;
 }
+
+/* —— Inicio tienda: intro + carrusel —— */
+.storeIntro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.storeIntroTitle {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0.25rem 0 0.35rem;
+}
+
+.storeIntroLead {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.storeIntroLead a {
+  color: #93c5fd;
+  font-weight: 600;
+}
+
+.inlineCode {
+  font-size: 0.82em;
+  padding: 0.1em 0.35em;
+  border-radius: 6px;
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+
+.storeIntroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.carouselSection {
+  margin-bottom: 2.25rem;
+}
+
+.carouselHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.sectionTitle {
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.carouselControls {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.carouselArrow {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.carouselArrow:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.carouselShell {
+  position: relative;
+}
+
+.carouselViewport {
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, #121820, #0e1218);
+  scrollbar-width: none;
+}
+
+.carouselViewport::-webkit-scrollbar {
+  display: none;
+}
+
+.carouselTrack {
+  display: flex;
+}
+
+.carouselSlide {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  box-sizing: border-box;
+}
+
+.carouselCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 1.25rem;
+  padding: 1.35rem 1.5rem;
+  min-height: 220px;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .carouselCard {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+}
+
+.carouselVisual {
+  aspect-ratio: 4 / 3;
+  max-height: 200px;
+  border-radius: 14px;
+  background: radial-gradient(circle at 30% 30%, rgba(245, 158, 11, 0.25), transparent 55%),
+    linear-gradient(145deg, #1e293b, #0f172a);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.carouselGlyph {
+  font-size: 3.5rem;
+  opacity: 0.9;
+}
+
+.carouselBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.carouselName {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.carouselDesc {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.carouselPrice {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.carouselDots {
+  display: flex;
+  justify-content: center;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.carouselDot,
+.carouselDotActive {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  background: var(--border);
+}
+
+.carouselDotActive {
+  background: var(--accent);
+  transform: scale(1.15);
+}
+
+.catalogSection {
+  margin-top: 0.5rem;
+}
+
+.cardThumb {
+  height: 120px;
+  border-radius: 12px;
+  margin-bottom: 0.65rem;
+  background: linear-gradient(145deg, #1e293b, #0f172a);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.25rem;
+}

@@ -1,26 +1,212 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { formatCLP } from "../lib/money";
+import { useAuth } from "../auth/AuthContext";
 import styles from "./pages.module.css";
 
+type Product = {
+  id: number;
+  name: string;
+  description: string;
+  price_cents: number;
+  stock: number;
+};
+
+const CAROUSEL_MAX = 6;
+const AUTO_MS = 6000;
+
+/** Inicio = catálogo: carrusel de destacados + rejilla completa. */
 export function Home() {
+  const { user } = useAuth();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const viewportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch("/api/store/products")
+      .then((r) => r.json())
+      .then((d) => setProducts(d.products || []));
+  }, []);
+
+  const featured = products.slice(0, Math.min(CAROUSEL_MAX, products.length));
+  const nFeatured = featured.length;
+
+  const scrollCarouselTo = useCallback(
+    (i: number) => {
+      const el = viewportRef.current;
+      if (!el || nFeatured < 1) return;
+      const clamped = ((i % nFeatured) + nFeatured) % nFeatured;
+      setCarouselIndex(clamped);
+      el.scrollTo({ left: clamped * el.clientWidth, behavior: "smooth" });
+    },
+    [nFeatured]
+  );
+
+  useEffect(() => {
+    if (nFeatured <= 1) return;
+    const t = window.setInterval(() => {
+      setCarouselIndex((prev) => {
+        const next = (prev + 1) % nFeatured;
+        const el = viewportRef.current;
+        if (el) el.scrollTo({ left: next * el.clientWidth, behavior: "smooth" });
+        return next;
+      });
+    }, AUTO_MS);
+    return () => window.clearInterval(t);
+  }, [nFeatured]);
+
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el || nFeatured === 0) return;
+    const onScroll = () => {
+      const w = el.clientWidth || 1;
+      const i = Math.round(el.scrollLeft / w);
+      setCarouselIndex(Math.min(nFeatured - 1, Math.max(0, i)));
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [nFeatured, products.length]);
+
+  async function addToCart(p: Product) {
+    setMsg(null);
+    if (!user) {
+      setMsg("Inicia sesión para agregar al carrito.");
+      return;
+    }
+    const res = await fetch("/api/store/cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ productId: p.id, quantity: 1 }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setMsg(data.error || "No se pudo agregar");
+      return;
+    }
+    setMsg(`Agregado: ${p.name}`);
+  }
+
   return (
-    <div className={styles.hero}>
-      <p className={styles.kicker}>Tienda de cartas y accesorios</p>
-      <h1 className={styles.heroTitle}>Trejotienda</h1>
-      <p className={styles.lead}>
-        Regístrate como cliente, arma tu carrito y paga en tienda (demo). Los administradores pueden dar de alta
-        productos nuevos.
-      </p>
-      <div className={styles.heroActions}>
-        <Link className={styles.btnPrimary} to="/catalogo">
-          Ver catálogo
-        </Link>
-        <Link className={styles.btnGhost} to="/registro">
-          Crear cuenta
-        </Link>
-      </div>
-      <p className={styles.hint}>
-        Cuenta demo admin: <code>admin@tienda.local</code> / <code>admin123</code>
-      </p>
+    <div>
+      <section className={styles.storeIntro}>
+        <div>
+          <p className={styles.kicker}>Trejotienda</p>
+          <h1 className={styles.storeIntroTitle}>Cartas, sobres y accesorios</h1>
+          <p className={styles.storeIntroLead}>
+            Navega el catálogo, usa el carrusel de destacados y añade al carrito.{" "}
+            <Link to="/registro">Crear cuenta</Link> · admin demo:{" "}
+            <code className={styles.inlineCode}>admin@tienda.local</code> / <code className={styles.inlineCode}>admin123</code>
+          </p>
+        </div>
+        <div className={styles.storeIntroActions}>
+          {!user && (
+            <>
+              <Link className={styles.btnPrimary} to="/login">
+                Entrar
+              </Link>
+              <Link className={styles.btnGhost} to="/registro">
+                Registro
+              </Link>
+            </>
+          )}
+        </div>
+      </section>
+
+      {msg && <p className={styles.banner}>{msg}</p>}
+
+      {products.length > 0 && (
+        <section className={styles.carouselSection} aria-label="Productos destacados">
+          <div className={styles.carouselHead}>
+            <h2 className={styles.sectionTitle}>Destacados</h2>
+            <div className={styles.carouselControls}>
+              <button
+                type="button"
+                className={styles.carouselArrow}
+                aria-label="Anterior"
+                onClick={() => scrollCarouselTo(carouselIndex - 1)}
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                className={styles.carouselArrow}
+                aria-label="Siguiente"
+                onClick={() => scrollCarouselTo(carouselIndex + 1)}
+              >
+                ›
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.carouselShell}>
+            <div className={styles.carouselViewport} ref={viewportRef}>
+              <div className={styles.carouselTrack}>
+                {featured.map((p) => (
+                  <div key={p.id} className={styles.carouselSlide}>
+                    <div className={styles.carouselCard}>
+                      <div className={styles.carouselVisual} aria-hidden>
+                        <span className={styles.carouselGlyph}>🃏</span>
+                      </div>
+                      <div className={styles.carouselBody}>
+                        <h3 className={styles.carouselName}>{p.name}</h3>
+                        <p className={styles.carouselDesc}>{p.description}</p>
+                        <p className={styles.carouselPrice}>{formatCLP(p.price_cents)}</p>
+                        <button
+                          type="button"
+                          className={styles.btnPrimary}
+                          onClick={() => addToCart(p)}
+                          disabled={p.stock < 1}
+                        >
+                          {p.stock < 1 ? "Agotado" : "Al carrito"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {nFeatured > 1 && (
+            <div className={styles.carouselDots} role="tablist" aria-label="Seleccionar slide">
+              {featured.map((p, i) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={i === carouselIndex}
+                  className={i === carouselIndex ? styles.carouselDotActive : styles.carouselDot}
+                  onClick={() => scrollCarouselTo(i)}
+                  aria-label={`Ver ${p.name}`}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      <section className={styles.catalogSection}>
+        <h2 className={styles.sectionTitle}>Todo el catálogo</h2>
+        <div className={styles.grid}>
+          {products.map((p) => (
+            <article key={p.id} className={styles.card}>
+              <div className={styles.cardThumb} aria-hidden>
+                <span>🎴</span>
+              </div>
+              <h2 className={styles.cardTitle}>{p.name}</h2>
+              <p className={styles.cardDesc}>{p.description}</p>
+              <p className={styles.price}>{formatCLP(p.price_cents)}</p>
+              <p className={styles.stock}>Stock: {p.stock}</p>
+              <button type="button" className={styles.btnPrimary} onClick={() => addToCart(p)} disabled={p.stock < 1}>
+                {p.stock < 1 ? "Agotado" : "Al carrito"}
+              </button>
+            </article>
+          ))}
+        </div>
+        {products.length === 0 && <p className={styles.muted}>Cargando productos…</p>}
+      </section>
     </div>
   );
 }

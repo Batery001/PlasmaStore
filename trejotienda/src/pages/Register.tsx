@@ -26,7 +26,7 @@ export function Register() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo registrar");
       await refresh();
-      nav("/catalogo");
+      nav("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error");
     } finally {
