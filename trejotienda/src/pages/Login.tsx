@@ -10,7 +10,7 @@ export function Login() {
   const { refresh } = useAuth();
   const nav = useNavigate();
   const location = useLocation();
-  const from = (location.state as LoginLocationState | null)?.from?.pathname ?? "/";
+  const from = (location.state as LoginLocationState | null)?.from?.pathname ?? "/catalogo";
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");

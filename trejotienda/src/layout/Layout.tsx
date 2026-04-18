@@ -8,11 +8,11 @@ export function Layout() {
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
-        <Link to="/" className={styles.brand}>
+        <Link to="/catalogo" className={styles.brand}>
           Plasma Store
         </Link>
         <nav className={styles.nav}>
-          <Link to="/">Inicio</Link>
+          <Link to="/catalogo">Catálogo</Link>
           <Link to="/carrito">Carrito</Link>
           {user?.role === "admin" && <Link to="/admin">Administración</Link>}
           {loading ? (
@@ -39,8 +39,8 @@ export function Layout() {
         <Outlet />
       </main>
       <footer className={styles.footer}>
-        Plasma Store · precios en CLP (demo) ·{" "}
-        <a href="/">Torneos (standing)</a>
+        Plasma Store · catálogo y carrito · precios en CLP (demo). La vista de standings de torneos se integrará
+        más adelante, paso a paso.
       </footer>
     </div>
   );

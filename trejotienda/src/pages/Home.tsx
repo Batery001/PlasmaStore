@@ -96,24 +96,27 @@ export function Home() {
     <div>
       <section className={styles.storeIntro}>
         <div>
-          <p className={styles.kicker}>Team Plasma</p>
+          <p className={styles.kicker}>Tienda</p>
           <h1 className={styles.storeIntroTitle}>Plasma Store</h1>
           <p className={styles.storeIntroLead}>
-            Cartas Pokémon, sobres y accesorios. Precios en <strong>CLP</strong>. Carrusel de destacados y catálogo
-            completo. <Link to="/registro">Crear cuenta</Link>
+            Por ahora solo <strong>catálogo y carrito</strong>: elige productos, inicia sesión y revisa tu carrito.
+            Precios en <strong>CLP</strong>. ¿Nuevo? <Link to="/registro">Crear cuenta</Link>
           </p>
         </div>
         <div className={styles.storeIntroActions}>
-          {!user && (
+          <Link className={styles.btnPrimary} to="/carrito">
+            Ver carrito
+          </Link>
+          {!user ? (
             <>
-              <Link className={styles.btnPrimary} to="/login">
+              <Link className={styles.btnGhost} to="/login">
                 Entrar
               </Link>
               <Link className={styles.btnGhost} to="/registro">
                 Registro
               </Link>
             </>
-          )}
+          ) : null}
         </div>
       </section>
 

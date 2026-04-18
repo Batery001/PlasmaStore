@@ -27,7 +27,7 @@ export function Register() {
       const data = await parseResponseJson<{ error?: string }>(res);
       if (!res.ok) throw new Error(data.error || "No se pudo registrar");
       await refresh();
-      nav("/");
+      nav("/catalogo");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error");
     } finally {

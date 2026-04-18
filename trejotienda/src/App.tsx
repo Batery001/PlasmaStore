@@ -1,7 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AdminLayout } from "./admin/AdminLayout";
 import { Layout } from "./layout/Layout";
-import { Home } from "./pages/Home";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Catalog } from "./pages/Catalog";
@@ -20,12 +19,12 @@ export default function App() {
         <Route path="carritos" element={<AdminCarts />} />
       </Route>
       <Route path="/" element={<Layout />}>
-        <Route index element={<Home />} />
+        <Route index element={<Navigate to="catalogo" replace />} />
         <Route path="login" element={<Login />} />
         <Route path="registro" element={<Register />} />
         <Route path="catalogo" element={<Catalog />} />
         <Route path="carrito" element={<Cart />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="catalogo" replace />} />
       </Route>
     </Routes>
   );

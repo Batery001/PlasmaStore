@@ -21,7 +21,7 @@ export function AdminLayout() {
   }
 
   if (user.role !== "admin") {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/catalogo" replace />;
   }
 
   return (
