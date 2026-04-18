@@ -192,6 +192,181 @@ export function mountStoreAndSession(app) {
     res.json({ ok: true });
   });
 
+  app.get("/api/store/admin/stats", requireAuth, requireAdmin, (_req, res) => {
+    const usersTotal = db.prepare("SELECT COUNT(*) AS c FROM users").get().c;
+    const customersCount = db.prepare("SELECT COUNT(*) AS c FROM users WHERE role = 'customer'").get().c;
+    const adminsCount = db.prepare("SELECT COUNT(*) AS c FROM users WHERE role = 'admin'").get().c;
+    const productsTotal = db.prepare("SELECT COUNT(*) AS c FROM products").get().c;
+    const productsActive = db.prepare("SELECT COUNT(*) AS c FROM products WHERE active = 1").get().c;
+    const lowStockCount = db
+      .prepare("SELECT COUNT(*) AS c FROM products WHERE active = 1 AND stock > 0 AND stock < 10")
+      .get().c;
+    const outOfStockCount = db
+      .prepare("SELECT COUNT(*) AS c FROM products WHERE active = 1 AND stock = 0")
+      .get().c;
+    const cartLineItems = db.prepare("SELECT COUNT(*) AS c FROM cart_items").get().c;
+    const cartSessions = db.prepare("SELECT COUNT(DISTINCT user_id) AS c FROM cart_items").get().c;
+    const cartAgg = db
+      .prepare(
+        `SELECT COALESCE(SUM(ci.quantity * p.price_cents), 0) AS valueCents,
+                COALESCE(SUM(ci.quantity), 0) AS units
+         FROM cart_items ci
+         JOIN products p ON p.id = ci.product_id`
+      )
+      .get();
+    res.json({
+      ok: true,
+      stats: {
+        usersTotal,
+        customersCount,
+        adminsCount,
+        productsTotal,
+        productsActive,
+        lowStockCount,
+        outOfStockCount,
+        cartLineItems,
+        cartSessions,
+        cartUnits: cartAgg.units,
+        cartValueCents: cartAgg.valueCents,
+      },
+    });
+  });
+
+  app.get("/api/store/admin/products", requireAuth, requireAdmin, (_req, res) => {
+    const rows = db
+      .prepare(
+        "SELECT id, name, description, price_cents, image_url, stock, active FROM products ORDER BY id"
+      )
+      .all();
+    res.json({ ok: true, products: rows });
+  });
+
+  app.patch("/api/store/admin/products/:id", requireAuth, requireAdmin, (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isFinite(id) || id < 1) {
+      return res.status(400).json({ ok: false, error: "id inválido." });
+    }
+    const row = db.prepare("SELECT id FROM products WHERE id = ?").get(id);
+    if (!row) return res.status(404).json({ ok: false, error: "Producto no encontrado." });
+
+    const fields = [];
+    const vals = [];
+    if (req.body.name !== undefined) {
+      const name = String(req.body.name).trim();
+      if (!name) return res.status(400).json({ ok: false, error: "Nombre vacío." });
+      fields.push("name = ?");
+      vals.push(name);
+    }
+    if (req.body.description !== undefined) {
+      fields.push("description = ?");
+      vals.push(String(req.body.description));
+    }
+    if (req.body.price_cents !== undefined) {
+      const price_cents = parseInt(String(req.body.price_cents), 10);
+      if (!Number.isFinite(price_cents) || price_cents < 0) {
+        return res.status(400).json({ ok: false, error: "Precio inválido." });
+      }
+      fields.push("price_cents = ?");
+      vals.push(price_cents);
+    }
+    if (req.body.stock !== undefined) {
+      const stock = parseInt(String(req.body.stock), 10);
+      if (!Number.isFinite(stock) || stock < 0) {
+        return res.status(400).json({ ok: false, error: "Stock inválido." });
+      }
+      fields.push("stock = ?");
+      vals.push(stock);
+    }
+    if (req.body.active !== undefined) {
+      const active = req.body.active === true || req.body.active === 1 || req.body.active === "1" ? 1 : 0;
+      fields.push("active = ?");
+      vals.push(active);
+    }
+    if (fields.length === 0) {
+      return res.status(400).json({ ok: false, error: "Nada que actualizar." });
+    }
+    vals.push(id);
+    db.prepare(`UPDATE products SET ${fields.join(", ")} WHERE id = ?`).run(...vals);
+    const product = db
+      .prepare("SELECT id, name, description, price_cents, image_url, stock, active FROM products WHERE id = ?")
+      .get(id);
+    res.json({ ok: true, product });
+  });
+
+  app.get("/api/store/admin/carts", requireAuth, requireAdmin, (_req, res) => {
+    const usersWithCart = db
+      .prepare(
+        `SELECT DISTINCT u.id AS userId, u.email, u.name, u.role
+         FROM users u
+         JOIN cart_items ci ON ci.user_id = u.id
+         ORDER BY u.id`
+      )
+      .all();
+    const itemsStmt = db.prepare(
+      `SELECT ci.product_id AS productId, ci.quantity, p.name, p.price_cents, p.stock AS productStock
+       FROM cart_items ci
+       JOIN products p ON p.id = ci.product_id
+       WHERE ci.user_id = ?
+       ORDER BY p.name`
+    );
+    const carts = usersWithCart.map((u) => {
+      const items = itemsStmt.all(u.userId);
+      const totalCents = items.reduce((s, i) => s + i.quantity * i.price_cents, 0);
+      const units = items.reduce((s, i) => s + i.quantity, 0);
+      return {
+        userId: u.userId,
+        email: u.email,
+        name: u.name,
+        role: u.role,
+        items,
+        totalCents,
+        units,
+        lineCount: items.length,
+      };
+    });
+    res.json({ ok: true, carts });
+  });
+
+  app.delete("/api/store/admin/carts/:userId", requireAuth, requireAdmin, (req, res) => {
+    const userId = parseInt(req.params.userId, 10);
+    if (!Number.isFinite(userId) || userId < 1) {
+      return res.status(400).json({ ok: false, error: "userId inválido." });
+    }
+    const r = db.prepare("DELETE FROM cart_items WHERE user_id = ?").run(userId);
+    res.json({ ok: true, removed: r.changes });
+  });
+
+  app.patch("/api/store/admin/cart-item", requireAuth, requireAdmin, (req, res) => {
+    const userId = parseInt(String(req.body?.userId), 10);
+    const productId = parseInt(String(req.body?.productId), 10);
+    const quantity = parseInt(String(req.body?.quantity), 10);
+    if (!Number.isFinite(userId) || userId < 1) {
+      return res.status(400).json({ ok: false, error: "userId inválido." });
+    }
+    if (!Number.isFinite(productId) || productId < 1) {
+      return res.status(400).json({ ok: false, error: "productId inválido." });
+    }
+    if (!Number.isFinite(quantity)) {
+      return res.status(400).json({ ok: false, error: "quantity inválido." });
+    }
+    if (quantity <= 0) {
+      db.prepare("DELETE FROM cart_items WHERE user_id = ? AND product_id = ?").run(userId, productId);
+      return res.json({ ok: true, removed: true });
+    }
+    const prod = db.prepare("SELECT stock FROM products WHERE id = ?").get(productId);
+    if (!prod) return res.status(404).json({ ok: false, error: "Producto no encontrado." });
+    if (quantity > prod.stock) {
+      return res.status(400).json({ ok: false, error: `Stock insuficiente (máx. ${prod.stock}).` });
+    }
+    const r = db
+      .prepare(
+        `INSERT INTO cart_items (user_id, product_id, quantity) VALUES (?,?,?)
+         ON CONFLICT(user_id, product_id) DO UPDATE SET quantity = excluded.quantity`
+      )
+      .run(userId, productId, quantity);
+    res.json({ ok: true, changes: r.changes });
+  });
+
   app.post("/api/store/admin/products", requireAuth, requireAdmin, (req, res) => {
     const name = String(req.body?.name || "").trim();
     const description = String(req.body?.description || "").trim();
@@ -207,7 +382,9 @@ export function mountStoreAndSession(app) {
       )
       .run(name, description, price_cents, Number.isFinite(stock) && stock >= 0 ? stock : 0);
     const product = db
-      .prepare("SELECT id, name, description, price_cents, stock FROM products WHERE id = ?")
+      .prepare(
+        "SELECT id, name, description, price_cents, image_url, stock, active FROM products WHERE id = ?"
+      )
       .get(info.lastInsertRowid);
     res.json({ ok: true, product });
   });

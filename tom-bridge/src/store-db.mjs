@@ -12,12 +12,14 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 
 /** @type {import('better-sqlite3').Database | null} */
 let db = null;
+/** Evita repetir bcrypt si getStoreDb() se llama más de una vez */
+let plasmaAdminEnsured = false;
 
 export function getStoreDb() {
-  if (db) return db;
-  db = new Database(DB_PATH);
-  db.pragma("journal_mode = WAL");
-  db.exec(`
+  if (!db) {
+    db = new Database(DB_PATH);
+    db.pragma("journal_mode = WAL");
+    db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT UNIQUE NOT NULL COLLATE NOCASE,
@@ -44,7 +46,12 @@ export function getStoreDb() {
       FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
     );
   `);
-  seedIfEmpty(db);
+    seedIfEmpty(db);
+  }
+  if (!plasmaAdminEnsured) {
+    ensurePlasmaAdmin(db);
+    plasmaAdminEnsured = true;
+  }
   return db;
 }
 
@@ -67,8 +74,6 @@ function seedIfEmpty(database) {
     ];
     for (const r of rows) ins.run(r[0], r[1], r[2], r[3]);
   }
-
-  ensurePlasmaAdmin(database);
 }
 
 /**
