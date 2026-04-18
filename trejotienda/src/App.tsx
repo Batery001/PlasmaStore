@@ -8,6 +8,7 @@ import { Cart } from "./pages/Cart";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { AdminProducts } from "./pages/AdminProducts";
 import { AdminCarts } from "./pages/AdminCarts";
+import { AdminWidgets } from "./pages/AdminWidgets";
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
         <Route index element={<Navigate to="panel" replace />} />
         <Route path="panel" element={<AdminDashboard />} />
         <Route path="productos" element={<AdminProducts />} />
+        <Route path="widgets" element={<AdminWidgets />} />
         <Route path="carritos" element={<AdminCarts />} />
       </Route>
       <Route path="/" element={<Layout />}>

@@ -55,6 +55,10 @@ export function getStoreDb() {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
       FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
     );
+    CREATE TABLE IF NOT EXISTS store_widgets (
+      widget_id TEXT PRIMARY KEY,
+      config_json TEXT NOT NULL
+    );
   `);
     seedIfEmpty(db);
     ensureDefaultProducts(db);

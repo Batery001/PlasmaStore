@@ -49,6 +49,14 @@ export function AdminLayout() {
           >
             Productos
           </NavLink>
+          <NavLink
+            to="/admin/widgets"
+            className={({ isActive }) =>
+              isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
+            }
+          >
+            Widgets
+          </NavLink>
           <div className={styles.navSection}>Ventas</div>
           <NavLink
             to="/admin/carritos"

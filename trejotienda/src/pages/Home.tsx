@@ -15,13 +15,13 @@ type Product = {
   image_url?: string | null;
 };
 
-const CAROUSEL_MAX = 6;
-const AUTO_MS = 6000;
-
 /** Inicio = catálogo: carrusel de destacados + rejilla completa. */
 export function Home() {
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
+  const [featured, setFeatured] = useState<Product[]>([]);
+  const [carouselEnabled, setCarouselEnabled] = useState(true);
+  const [carouselAutoMs, setCarouselAutoMs] = useState(6000);
   const [msg, setMsg] = useState<string | null>(null);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -33,7 +33,28 @@ export function Home() {
       .catch(() => setProducts([]));
   }, []);
 
-  const featured = products.slice(0, Math.min(CAROUSEL_MAX, products.length));
+  useEffect(() => {
+    fetch("/api/store/carousel")
+      .then(async (r) => parseResponseJson<{ products?: Product[]; enabled?: boolean; autoMs?: number }>(r))
+      .then((d) => {
+        setFeatured(d.products || []);
+        setCarouselEnabled(d.enabled !== false);
+        const am = typeof d.autoMs === "number" && Number.isFinite(d.autoMs) ? d.autoMs : 6000;
+        setCarouselAutoMs(am);
+      })
+      .catch(() => {
+        setFeatured([]);
+        setCarouselEnabled(true);
+        setCarouselAutoMs(6000);
+      });
+  }, []);
+
+  useEffect(() => {
+    setCarouselIndex(0);
+    const el = viewportRef.current;
+    if (el) el.scrollTo({ left: 0, behavior: "auto" });
+  }, [featured]);
+
   const nFeatured = featured.length;
 
   const scrollCarouselTo = useCallback(
@@ -48,7 +69,7 @@ export function Home() {
   );
 
   useEffect(() => {
-    if (nFeatured <= 1) return;
+    if (nFeatured <= 1 || carouselAutoMs <= 0) return;
     const t = window.setInterval(() => {
       setCarouselIndex((prev) => {
         const next = (prev + 1) % nFeatured;
@@ -56,9 +77,9 @@ export function Home() {
         if (el) el.scrollTo({ left: next * el.clientWidth, behavior: "smooth" });
         return next;
       });
-    }, AUTO_MS);
+    }, carouselAutoMs);
     return () => window.clearInterval(t);
-  }, [nFeatured]);
+  }, [nFeatured, carouselAutoMs]);
 
   useEffect(() => {
     const el = viewportRef.current;
@@ -70,7 +91,7 @@ export function Home() {
     };
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
-  }, [nFeatured, products.length]);
+  }, [nFeatured, featured.length]);
 
   async function addToCart(p: Product) {
     setMsg(null);
@@ -122,7 +143,7 @@ export function Home() {
 
       {msg && <p className={styles.banner}>{msg}</p>}
 
-      {products.length > 0 && (
+      {carouselEnabled && nFeatured > 0 && (
         <section className={styles.carouselSection} aria-label="Productos destacados">
           <div className={styles.carouselHead}>
             <h2 className={styles.sectionTitle}>Destacados</h2>
@@ -149,8 +170,8 @@ export function Home() {
           <div className={styles.carouselShell}>
             <div className={styles.carouselViewport} ref={viewportRef}>
               <div className={styles.carouselTrack}>
-                {featured.map((p) => (
-                  <div key={p.id} className={styles.carouselSlide}>
+                {featured.map((p, slideIdx) => (
+                  <div key={`${p.id}-${slideIdx}`} className={styles.carouselSlide}>
                     <div className={styles.carouselCard}>
                       <div className={styles.carouselVisual} aria-hidden>
                         {resolveStoreMediaUrl(p.image_url) ? (
@@ -187,7 +208,7 @@ export function Home() {
             <div className={styles.carouselDots} role="tablist" aria-label="Seleccionar slide">
               {featured.map((p, i) => (
                 <button
-                  key={p.id}
+                  key={`dot-${p.id}-${i}`}
                   type="button"
                   role="tab"
                   aria-selected={i === carouselIndex}

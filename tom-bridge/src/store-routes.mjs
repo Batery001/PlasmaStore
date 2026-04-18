@@ -64,6 +64,63 @@ function optionalProductImageUpload(req, res, next) {
   next();
 }
 
+const CAROUSEL_WIDGET_ID = "carousel_home";
+const CAROUSEL_MAX = 6;
+
+/**
+ * @param {import('better-sqlite3').Database} database
+ */
+function readCarouselConfig(database) {
+  const defaults = { enabled: true, autoMs: 6000, maxSlides: CAROUSEL_MAX, productIds: [] };
+  const row = database.prepare("SELECT config_json FROM store_widgets WHERE widget_id = ?").get(CAROUSEL_WIDGET_ID);
+  if (!row?.config_json) return defaults;
+  try {
+    const j = JSON.parse(row.config_json);
+    const productIds = Array.isArray(j.productIds)
+      ? [...new Set(j.productIds.map((x) => parseInt(String(x), 10)).filter((n) => Number.isFinite(n) && n > 0))].slice(
+          0,
+          CAROUSEL_MAX
+        )
+      : [];
+    let maxSlides = parseInt(String(j.maxSlides), 10);
+    if (!Number.isFinite(maxSlides)) maxSlides = CAROUSEL_MAX;
+    maxSlides = Math.min(CAROUSEL_MAX, Math.max(1, maxSlides));
+    let autoMs = parseInt(String(j.autoMs), 10);
+    if (!Number.isFinite(autoMs)) autoMs = defaults.autoMs;
+    autoMs = Math.min(120000, Math.max(0, autoMs));
+    const enabled = j.enabled !== false;
+    return { enabled, autoMs, maxSlides, productIds: productIds.slice(0, maxSlides) };
+  } catch {
+    return defaults;
+  }
+}
+
+/**
+ * @param {import('better-sqlite3').Database} database
+ * @param {{ enabled: boolean; maxSlides: number; productIds: number[] }} cfg
+ */
+function buildCarouselProducts(database, cfg) {
+  const cols = "id, name, description, price_cents, image_url, stock";
+  const limit = cfg.maxSlides;
+  const byId = database.prepare(`SELECT ${cols} FROM products WHERE id = ? AND active = 1`);
+  const ordered = [];
+  const seen = new Set();
+  if (cfg.productIds.length > 0) {
+    for (const id of cfg.productIds) {
+      if (ordered.length >= limit) break;
+      const p = byId.get(id);
+      if (p && !seen.has(p.id)) {
+        seen.add(p.id);
+        ordered.push(p);
+      }
+    }
+  }
+  if (ordered.length === 0) {
+    return database.prepare(`SELECT ${cols} FROM products WHERE active = 1 ORDER BY id LIMIT ?`).all(limit);
+  }
+  return ordered;
+}
+
 /**
  * @param {import('express').Express} app
  */
@@ -188,6 +245,20 @@ export function mountStoreAndSession(app) {
     res.json({ ok: true, products: rows });
   });
 
+  app.get("/api/store/carousel", (_req, res) => {
+    const cfg = readCarouselConfig(db);
+    const products = cfg.enabled ? buildCarouselProducts(db, cfg) : [];
+    const source = !cfg.enabled ? "off" : cfg.productIds.length > 0 ? "manual" : "fallback";
+    res.json({
+      ok: true,
+      enabled: cfg.enabled,
+      autoMs: cfg.autoMs,
+      maxSlides: cfg.maxSlides,
+      source,
+      products,
+    });
+  });
+
   app.get("/api/store/cart", requireAuth, (req, res) => {
     const rows = db
       .prepare(
@@ -292,6 +363,51 @@ export function mountStoreAndSession(app) {
         cartValueCents: cartAgg.valueCents,
       },
     });
+  });
+
+  app.get("/api/store/admin/widgets", requireAuth, requireAdmin, (_req, res) => {
+    const carousel = readCarouselConfig(db);
+    const catalogProducts = db.prepare("SELECT id, name, active, stock FROM products ORDER BY id").all();
+    res.json({
+      ok: true,
+      carousel,
+      catalogProducts,
+      supportedWidgets: [{ id: CAROUSEL_WIDGET_ID, label: "Carrusel principal (Destacados)" }],
+    });
+  });
+
+  app.put("/api/store/admin/widgets", requireAuth, requireAdmin, (req, res) => {
+    const c = req.body?.carousel;
+    if (!c || typeof c !== "object") {
+      return res.status(400).json({ ok: false, error: "Falta el objeto carousel en el cuerpo." });
+    }
+    let productIds = Array.isArray(c.productIds) ? c.productIds : [];
+    productIds = [...new Set(productIds.map((x) => parseInt(String(x), 10)).filter((n) => Number.isFinite(n) && n > 0))].slice(
+      0,
+      CAROUSEL_MAX
+    );
+    for (const id of productIds) {
+      if (!db.prepare("SELECT id FROM products WHERE id = ?").get(id)) {
+        return res.status(400).json({ ok: false, error: `El producto ${id} no existe.` });
+      }
+    }
+    let maxSlides = parseInt(String(c.maxSlides ?? CAROUSEL_MAX), 10);
+    if (!Number.isFinite(maxSlides)) maxSlides = CAROUSEL_MAX;
+    maxSlides = Math.min(CAROUSEL_MAX, Math.max(1, maxSlides));
+    let autoMs = parseInt(String(c.autoMs ?? 6000), 10);
+    if (!Number.isFinite(autoMs)) autoMs = 6000;
+    autoMs = Math.min(120000, Math.max(0, autoMs));
+    const enabled = c.enabled !== false && c.enabled !== 0 && c.enabled !== "0";
+    const config_json = JSON.stringify({
+      productIds: productIds.slice(0, maxSlides),
+      maxSlides,
+      autoMs,
+      enabled,
+    });
+    db.prepare(
+      "INSERT INTO store_widgets (widget_id, config_json) VALUES (?, ?) ON CONFLICT(widget_id) DO UPDATE SET config_json = excluded.config_json"
+    ).run(CAROUSEL_WIDGET_ID, config_json);
+    res.json({ ok: true, carousel: readCarouselConfig(db) });
   });
 
   app.get("/api/store/admin/products", requireAuth, requireAdmin, (_req, res) => {
