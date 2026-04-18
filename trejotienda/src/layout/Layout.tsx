@@ -14,7 +14,7 @@ export function Layout() {
         <nav className={styles.nav}>
           <Link to="/">Inicio</Link>
           <Link to="/carrito">Carrito</Link>
-          {user?.role === "admin" && <Link to="/admin/productos">Admin</Link>}
+          {user?.role === "admin" && <Link to="/admin">Administración</Link>}
           {loading ? (
             <span className={styles.muted}>…</span>
           ) : user ? (

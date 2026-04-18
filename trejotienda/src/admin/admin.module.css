@@ -1,0 +1,386 @@
+/* Inspirado en el panel de OpenCart 3: barra lateral oscura, contenido claro, acento verde */
+
+.root {
+  min-height: 100vh;
+  display: flex;
+  background: #f6f6f6;
+  color: #333;
+  font-size: 14px;
+}
+
+.sidebar {
+  width: 235px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #242d32 0%, #1a2226 100%);
+  color: #c4cdd1;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #0f1315;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.12);
+}
+
+.brand {
+  padding: 1rem 1.1rem 0.25rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.subbrand {
+  padding: 0 1.1rem 1rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #7a8a92;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  padding: 0.65rem 0;
+  gap: 2px;
+  flex: 1;
+}
+
+.navItem {
+  display: block;
+  padding: 0.65rem 1.1rem;
+  color: #b8c2c7;
+  text-decoration: none;
+  border-left: 3px solid transparent;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.navItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.navItemActive {
+  background: rgba(70, 165, 70, 0.12);
+  color: #fff;
+  border-left-color: #46a546;
+}
+
+.navSection {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #5d6e78;
+  padding: 1rem 1.1rem 0.35rem;
+}
+
+.sidebarFooter {
+  padding: 1rem 1.1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sidebarFooter a {
+  color: #8db8d6;
+  font-size: 0.88rem;
+  text-decoration: none;
+}
+
+.sidebarFooter a:hover {
+  text-decoration: underline;
+}
+
+.linkbtn {
+  background: transparent;
+  border: none;
+  color: #c4cdd1;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  font-size: 0.88rem;
+}
+
+.linkbtn:hover {
+  color: #fff;
+}
+
+.mainWrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topbar {
+  background: #fff;
+  border-bottom: 1px solid #e6e6e6;
+  padding: 0.65rem 1.5rem;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.content {
+  flex: 1;
+  padding: 1.25rem 1.5rem 2rem;
+}
+
+.pageTitle {
+  font-size: 1.45rem;
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+  color: #222;
+  letter-spacing: -0.02em;
+}
+
+.pageLead {
+  margin: 0 0 1.25rem;
+  color: #666;
+  font-size: 0.92rem;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.statCard {
+  background: #fff;
+  border: 1px solid #e3e3e3;
+  border-radius: 3px;
+  padding: 1rem 1.1rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #888;
+  margin-bottom: 0.35rem;
+}
+
+.statValue {
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #222;
+  line-height: 1.1;
+}
+
+.statHint {
+  font-size: 0.78rem;
+  color: #999;
+  margin-top: 0.35rem;
+}
+
+.panelCard {
+  background: #fff;
+  border: 1px solid #e3e3e3;
+  border-radius: 3px;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.panelCard h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.85rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #eee;
+  color: #333;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.table th,
+.table td {
+  border: 1px solid #e3e3e3;
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+}
+
+.table th {
+  background: #f8f8f8;
+  font-weight: 600;
+  color: #444;
+}
+
+.table tr:nth-child(even) td {
+  background: #fafafa;
+}
+
+.inputSm {
+  width: 4.5rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid #ccc;
+  border-radius: 2px;
+  font-size: 0.88rem;
+}
+
+.check {
+  width: 1rem;
+  height: 1rem;
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  border-radius: 3px;
+  border: 1px solid #ccc;
+  background: #f8f8f8;
+  cursor: pointer;
+  color: #333;
+}
+
+.btn:hover {
+  background: #eee;
+}
+
+.btnPrimary {
+  display: inline-block;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  border-radius: 3px;
+  border: 1px solid #3d943d;
+  background: #46a546;
+  cursor: pointer;
+  color: #fff;
+}
+
+.btnPrimary:hover {
+  background: #3d943d;
+}
+
+.btnDanger {
+  display: inline-block;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  border-radius: 3px;
+  border: 1px solid #d9534f;
+  background: #fff;
+  cursor: pointer;
+  color: #c9302c;
+}
+
+.btnDanger:hover {
+  background: #fde8e8;
+}
+
+.btnLink {
+  background: none;
+  border: none;
+  color: #1e91cf;
+  cursor: pointer;
+  font-size: 0.82rem;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.muted {
+  color: #888;
+  font-size: 0.86rem;
+}
+
+.banner {
+  padding: 0.5rem 0.75rem;
+  background: #eaf6ff;
+  border: 1px solid #b8daf3;
+  border-radius: 3px;
+  color: #245;
+  font-size: 0.88rem;
+}
+
+.error {
+  color: #c9302c;
+  font-size: 0.88rem;
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.expandRow td {
+  background: #f4f9fc !important;
+  border-top: none;
+}
+
+.subTable {
+  width: 100%;
+  font-size: 0.82rem;
+  margin: 0.25rem 0;
+}
+
+.subTable th,
+.subTable td {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #dde8ef;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem 1rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #555;
+}
+
+.input,
+.textarea {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid #ccc;
+  border-radius: 2px;
+  font-size: 0.9rem;
+  background: #fff;
+  color: #222;
+}
+
+.textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+
+@media (max-width: 768px) {
+  .root {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    flex: 1 1 auto;
+  }
+
+  .navSection {
+    width: 100%;
+  }
+}

@@ -1,11 +1,15 @@
 import { FormEvent, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import styles from "./pages.module.css";
+
+type LoginLocationState = { from?: { pathname: string } };
 
 export function Login() {
   const { refresh } = useAuth();
   const nav = useNavigate();
+  const location = useLocation();
+  const from = (location.state as LoginLocationState | null)?.from?.pathname ?? "/";
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -25,7 +29,7 @@ export function Login() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error al entrar");
       await refresh();
-      nav("/");
+      nav(from, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error");
     } finally {
