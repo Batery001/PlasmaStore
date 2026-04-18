@@ -358,3 +358,255 @@ table.preview td.num {
   color: #9fe8c3;
   font-size: 0.88rem;
 }
+
+/* —— Navegación entre modos —— */
+.top-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  padding: 0.65rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.top-nav a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.top-nav a:hover {
+  text-decoration: underline;
+}
+
+.top-nav__sep {
+  color: var(--muted);
+  user-select: none;
+}
+
+.top-nav__badge {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  background: rgba(91, 140, 255, 0.15);
+  color: var(--accent);
+  border: 1px solid rgba(91, 140, 255, 0.35);
+}
+
+.top-nav--light {
+  background: #fff;
+  border-bottom-color: #e2e8f0;
+}
+
+.top-nav--light a {
+  color: #2563eb;
+}
+
+.top-nav__badge--light {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+/* —— Hub inicio —— */
+body.theme-hub {
+  background: linear-gradient(165deg, #f0f4ff 0%, #e8f0fe 40%, #fff 100%);
+  color: #1e293b;
+}
+
+.theme-hub code {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.hub {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 3rem 1.25rem 4rem;
+}
+
+.hub__title {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.5rem;
+  color: #0f172a;
+}
+
+.hub__lead {
+  margin: 0 0 1.75rem;
+  color: #475569;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.hub-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.hub-card {
+  display: block;
+  padding: 1.25rem 1.35rem;
+  border-radius: var(--radius);
+  border: 1px solid #cbd5e1;
+  text-decoration: none;
+  color: inherit;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.hub-card:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+  transform: translateY(-1px);
+}
+
+.hub-card__label {
+  display: block;
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 0.35rem;
+  color: #0f172a;
+}
+
+.hub-card__desc {
+  display: block;
+  font-size: 0.9rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.hub-card--user {
+  border-left: 4px solid #2563eb;
+}
+
+.hub-card--admin {
+  border-left: 4px solid #7c3aed;
+}
+
+.hub__hint {
+  margin: 2rem 0 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+/* —— Vista usuario (público claro) —— */
+body.theme-user {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.user-app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+}
+
+.user-header__title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.35rem;
+}
+
+.user-header__sub {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.user-empty {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  background: #fff;
+  border: 1px dashed #cbd5e1;
+  color: #475569;
+  text-align: center;
+}
+
+.user-hero {
+  margin-top: 1.5rem;
+  padding: 1.35rem 1.25rem;
+  border-radius: var(--radius);
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.user-hero__name {
+  margin: 0 0 1rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.user-hero__meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 0;
+}
+
+@media (max-width: 520px) {
+  .user-hero__meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+.user-hero__meta dt {
+  margin: 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.user-hero__meta dd {
+  margin: 0.2rem 0 0;
+  font-weight: 600;
+  color: #334155;
+}
+
+.user-cat {
+  margin-top: 1.5rem;
+}
+
+.user-cat__title {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+.user-table-wrap {
+  border-color: #e2e8f0;
+}
+
+table.user-table {
+  background: #fff;
+}
+
+table.user-table th {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+table.user-table td,
+table.user-table th {
+  border-bottom-color: #e2e8f0;
+}
+
+.actions__text a {
+  color: var(--accent);
+}

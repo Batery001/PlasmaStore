@@ -349,13 +349,30 @@
     }
   });
 
-  btnConfirm.addEventListener("click", () => {
+  btnConfirm.addEventListener("click", async () => {
     if (!state) return;
-    const body = { ...state.payload, publishedAt: new Date().toISOString(), dryRun: true };
-    jsonOut.textContent = JSON.stringify(body, null, 2);
-    show(jsonOut, true);
-    show(toast, true);
-    toast.textContent = "Simulación OK — en producción este JSON se enviaría a tu backend.";
+    const body = { ...state.payload, publishedAt: new Date().toISOString() };
+    try {
+      const res = await fetch("/api/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(out.error || res.statusText);
+      }
+      jsonOut.textContent = JSON.stringify(out.stored || body, null, 2);
+      show(jsonOut, true);
+      show(toast, true);
+      toast.textContent = "Publicado. Los usuarios lo ven en Vista usuario (misma URL, otra pestaña).";
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      show(toast, true);
+      toast.textContent = "Error al publicar: " + msg + " — ¿Abriste esta página por http://localhost:3847?";
+      show(jsonOut, true);
+      jsonOut.textContent = msg;
+    }
   });
 
   async function tryLiveConnect() {

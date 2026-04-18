@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Administración — StandingUp</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <nav class="top-nav">
+    <a href="index.html">Inicio</a>
+    <span class="top-nav__sep">·</span>
+    <a href="user.html">Vista usuario</a>
+    <span class="top-nav__badge">Admin</span>
+  </nav>
+  <div class="app">
+    <header class="header">
+      <div class="header__text">
+        <h1 class="title">Panel de administración</h1>
+        <p class="subtitle">
+          <strong>Manual:</strong> arrastra un <code>*standings.html</code>.
+          <strong>Watcher:</strong> con el servidor activo, se lee el <code>.tdf</code> de <code>TOM_DATA</code>; verás <strong>avisos</strong> al cambiar el archivo.
+          <strong>Publicar</strong> deja los resultados visibles en la vista usuario.
+        </p>
+      </div>
+      <span class="badge" id="modeBadge">Modo prueba</span>
+    </header>
+
+    <section class="panel live-banner hidden" id="liveBanner">
+      <div class="live-banner__row">
+        <span class="live-dot" aria-hidden="true"></span>
+        <p class="live-banner__text" id="liveBannerText"></p>
+      </div>
+      <label class="live-check">
+        <input type="checkbox" id="autoRefresh" checked />
+        Auto-actualizar vista cuando cambie el <code>.tdf</code>
+      </label>
+    </section>
+
+    <section class="panel admin-notice hidden" id="adminNotice" role="status" aria-live="polite">
+      <h2 class="admin-notice__title">Administración — aviso</h2>
+      <p class="admin-notice__body" id="adminNoticeBody"></p>
+      <div class="admin-notice__actions">
+        <button type="button" class="btn btn--primary hidden" id="btnOpenPreview">Abrir vista previa</button>
+        <button type="button" class="btn btn--ghost" id="btnDismissNotice">Cerrar aviso</button>
+      </div>
+    </section>
+
+    <section class="panel dropzone" id="dropzone" aria-label="Zona para soltar el archivo HTML">
+      <input type="file" id="fileInput" accept=".html,.htm,text/html" hidden />
+      <div class="dropzone__inner">
+        <div class="dropzone__icon" aria-hidden="true">📄</div>
+        <p class="dropzone__title">Arrastra aquí el standings o haz clic para elegir</p>
+        <p class="dropzone__hint">Ejemplo: <code>TOM_DATA\data\reports\…standings.html</code></p>
+      </div>
+    </section>
+
+    <section class="panel meta hidden" id="metaPanel">
+      <h2 class="panel__title">Datos del informe</h2>
+      <dl class="meta-grid" id="metaGrid"></dl>
+      <p class="warn hidden" id="finalWarn"></p>
+    </section>
+
+    <section class="panel hidden" id="previewPanel">
+      <h2 class="panel__title">Vista previa — Top 4 por categoría</h2>
+      <div id="categoriesRoot"></div>
+    </section>
+
+    <section class="panel actions hidden" id="actionsPanel">
+      <h2 class="panel__title">Publicar resultados</h2>
+      <p class="actions__text">
+        Revisa la vista previa y confirma. Los usuarios verán este torneo en <a href="user.html">Vista usuario</a>.
+      </p>
+      <div class="btn-row">
+        <button type="button" class="btn btn--ghost" id="btnClear">Limpiar</button>
+        <button type="button" class="btn btn--primary" id="btnConfirm" disabled>Confirmar y publicar</button>
+      </div>
+      <pre class="json-out hidden" id="jsonOut" aria-live="polite"></pre>
+      <p class="toast hidden" id="toast" role="status"></p>
+    </section>
+  </div>
+  <script src="admin-app.js"></script>
+</body>
+</html>

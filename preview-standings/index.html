@@ -3,79 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Preview standings → Top 4 (pruebas)</title>
+  <title>StandingUp — pruebas</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
-  <div class="app">
-    <header class="header">
-      <div class="header__text">
-        <h1 class="title">Preview de clasificación</h1>
-        <p class="subtitle">
-          <strong>Modo manual:</strong> arrastra un <code>*standings.html</code>.
-          <strong>Modo watcher:</strong> ejecuta <code>npm start</code> en <code>tom-bridge</code> y abre esta misma página por <code>http://localhost:3847</code> para leer el último <code>.tdf</code> de la raíz de <code>TOM_DATA</code>. Cuando cambie el archivo, verás un <strong>aviso de administración</strong> (torneo, fecha del evento y hora del guardado).
-          Nada se envía a internet.
-        </p>
-      </div>
-      <span class="badge" id="modeBadge">Modo prueba</span>
-    </header>
-
-    <section class="panel live-banner hidden" id="liveBanner">
-      <div class="live-banner__row">
-        <span class="live-dot" aria-hidden="true"></span>
-        <p class="live-banner__text" id="liveBannerText"></p>
-      </div>
-      <label class="live-check">
-        <input type="checkbox" id="autoRefresh" checked />
-        Auto-actualizar vista cuando cambie el <code>.tdf</code>
-      </label>
-    </section>
-
-    <section class="panel admin-notice hidden" id="adminNotice" role="status" aria-live="polite">
-      <h2 class="admin-notice__title">Administración — aviso</h2>
-      <p class="admin-notice__body" id="adminNoticeBody"></p>
-      <div class="admin-notice__actions">
-        <button type="button" class="btn btn--primary hidden" id="btnOpenPreview">Abrir vista previa</button>
-        <button type="button" class="btn btn--ghost" id="btnDismissNotice">Cerrar aviso</button>
-      </div>
-    </section>
-
-    <section class="panel dropzone" id="dropzone" aria-label="Zona para soltar el archivo HTML">
-      <input type="file" id="fileInput" accept=".html,.htm,text/html" hidden />
-      <div class="dropzone__inner">
-        <div class="dropzone__icon" aria-hidden="true">📄</div>
-        <p class="dropzone__title">Arrastra aquí el standings o haz clic para elegir</p>
-        <p class="dropzone__hint">Ejemplo: <code>TOM_DATA\data\reports\…standings.html</code></p>
-      </div>
-    </section>
-
-    <section class="panel meta hidden" id="metaPanel">
-      <h2 class="panel__title">Datos del informe</h2>
-      <dl class="meta-grid" id="metaGrid"></dl>
-      <p class="warn hidden" id="finalWarn"></p>
-    </section>
-
-    <section class="panel hidden" id="previewPanel">
-      <h2 class="panel__title">Vista previa — Top 4 por categoría</h2>
-      <div id="categoriesRoot"></div>
-    </section>
-
-    <section class="panel actions hidden" id="actionsPanel">
-      <h2 class="panel__title">Publicación (simulada)</h2>
-      <p class="actions__text">
-        Revisa la vista previa. Al confirmar solo se muestra el payload; en producción aquí iría la llamada a tu API.
-      </p>
-      <div class="btn-row">
-        <button type="button" class="btn btn--ghost" id="btnClear">Limpiar</button>
-        <button type="button" class="btn btn--primary" id="btnConfirm" disabled>Confirmar y publicar</button>
-      </div>
-      <pre class="json-out hidden" id="jsonOut" aria-live="polite"></pre>
-      <p class="toast hidden" id="toast" role="status"></p>
-    </section>
+<body class="theme-hub">
+  <div class="hub">
+    <h1 class="hub__title">StandingUp</h1>
+    <p class="hub__lead">Pruebas locales: elige el modo. El servidor debe estar en marcha (<code>npm start</code> en <code>tom-bridge</code>).</p>
+    <div class="hub-cards">
+      <a class="hub-card hub-card--user" href="user.html">
+        <span class="hub-card__label">Modo usuario</span>
+        <span class="hub-card__desc">Ver el último torneo publicado (solo resultados).</span>
+      </a>
+      <a class="hub-card hub-card--admin" href="admin.html">
+        <span class="hub-card__label">Modo administración</span>
+        <span class="hub-card__desc">Watcher TOM, avisos, vista previa y publicar resultados.</span>
+      </a>
+    </div>
+    <p class="hub__hint">URL típica: <code>http://localhost:3847/</code></p>
   </div>
-  <script src="app.js"></script>
 </body>
 </html>

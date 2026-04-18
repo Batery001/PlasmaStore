@@ -150,6 +150,9 @@ let pending = {
   parseError: null,
 };
 
+/** Último torneo publicado desde el panel admin (solo memoria; se pierde al reiniciar el servidor). */
+let lastPublished = null;
+
 function readAndIngest(absPath) {
   const base = path.basename(absPath);
   if (!base.toLowerCase().endsWith(".tdf")) return;
@@ -195,6 +198,7 @@ function bootstrapLatestTdf() {
 
 function main() {
   const app = express();
+  app.use(express.json({ limit: "2mb" }));
 
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, tomData: TOM_DATA });
@@ -210,6 +214,24 @@ function main() {
         parseError: pending.parseError,
       },
     });
+  });
+
+  app.get("/api/public/results", (_req, res) => {
+    res.json({ ok: true, hasData: !!lastPublished, data: lastPublished });
+  });
+
+  app.post("/api/publish", (req, res) => {
+    const b = req.body;
+    if (!b || typeof b !== "object") {
+      return res.status(400).json({ ok: false, error: "Cuerpo JSON vacío o inválido." });
+    }
+    if (!Array.isArray(b.categories) || b.categories.length === 0) {
+      return res.status(400).json({ ok: false, error: "Faltan categories con el top publicado." });
+    }
+    const publishedAt = typeof b.publishedAt === "string" ? b.publishedAt : new Date().toISOString();
+    const { dryRun: _dry, ...rest } = b;
+    lastPublished = { ...rest, publishedAt };
+    return res.json({ ok: true, stored: lastPublished });
   });
 
   app.use(express.static(UI_DIR));
@@ -238,7 +260,7 @@ function main() {
     } else {
       bootstrapLatestTdf();
     }
-    console.log(`[tom-bridge] UI+d API http://localhost:${PORT}`);
+    console.log(`[tom-bridge] UI http://localhost:${PORT}/  (usuario: /user.html, admin: /admin.html)`);
     console.log(`[tom-bridge] Vigilando .tdf en raíz de: ${TOM_DATA}`);
   });
 }
