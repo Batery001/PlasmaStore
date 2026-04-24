@@ -21,6 +21,23 @@ En el proyecto de Vercel (el de `trejotienda`) agrega:
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `APP_SESSION_SECRET` (una frase larga aleatoria)
 
+### Bootstrap admin (para “llegar y usar”)
+
+Agrega además:
+
+- `BOOTSTRAP_TOKEN` (token secreto para crear el primer admin)
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+
+Luego, **una sola vez**:
+
+```bash
+curl -X POST "https://TU-DOMINIO.vercel.app/api/store/bootstrap-admin" ^
+  -H "x-bootstrap-token: TU_BOOTSTRAP_TOKEN"
+```
+
+Después inicia sesión en la web con `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+
 ## 3) Endpoints (mismo dominio)
 
 - `POST /api/admin/upload-tdf` (multipart, campo `tdf`)

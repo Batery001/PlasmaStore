@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { clearSessionCookie, json, makeSessionCookie, readJson, readSession } from "../_lib/http";
 import { supabaseAdmin } from "../_lib/supabase";
+import { ADMIN_EMAIL, ADMIN_PASSWORD, BOOTSTRAP_TOKEN } from "../_lib/env";
 
 function pathParts(req: any): string[] {
   const p = req.query?.path;
@@ -27,6 +28,30 @@ export default async function handler(req: any, res: any) {
   const sb = supabaseAdmin();
 
   try {
+    // --- Bootstrap admin (one-time / protegido por token) ---
+    // POST /api/store/bootstrap-admin  header: x-bootstrap-token
+    if (route === "bootstrap-admin" && req.method === "POST") {
+      const token = String(req.headers?.["x-bootstrap-token"] || "").trim();
+      if (!token || token !== BOOTSTRAP_TOKEN()) return json(res, 401, { ok: false, error: "Token inválido." });
+
+      const email = ADMIN_EMAIL().toLowerCase();
+      const password = ADMIN_PASSWORD();
+      if (password.length < 6) return json(res, 400, { ok: false, error: "ADMIN_PASSWORD muy corta (mín 6)." });
+
+      const { count, error: cErr } = await sb.from("store_users").select("id", { count: "exact", head: true });
+      if (cErr) return json(res, 500, { ok: false, error: cErr.message });
+      if ((count || 0) > 0) return json(res, 409, { ok: false, error: "Ya existen usuarios. Bootstrap bloqueado." });
+
+      const passHash = await bcrypt.hash(password, 10);
+      const { data, error } = await sb
+        .from("store_users")
+        .insert({ email, name: "admin", pass_hash: passHash, role: "admin" })
+        .select("id,email,name,role")
+        .single();
+      if (error) return json(res, 400, { ok: false, error: error.message });
+      return json(res, 200, { ok: true, user: data });
+    }
+
     // --- Auth ---
     if (route === "me" && req.method === "GET") {
       const s = readSession(req);
