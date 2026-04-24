@@ -1,11 +1,11 @@
 /**
- * Evita JSON.parse sobre HTML (p. ej. index.html del SPA cuando /api no llega a tom-bridge).
+ * Evita JSON.parse sobre HTML (p. ej. layout Next cuando /api no enruta al backend).
  */
 export async function parseResponseJson<T>(res: Response): Promise<T> {
   const text = await res.text();
   if (!text.trim()) {
     throw new Error(
-      "Respuesta vacía del servidor. Arranca tom-bridge (puerto 3847) o abre la tienda en http://localhost:3847/tienda/"
+      "Respuesta vacía del servidor. Comprueba que Next esté en marcha (npm run dev) y variables como MONGODB_URI."
     );
   }
   try {
@@ -13,10 +13,10 @@ export async function parseResponseJson<T>(res: Response): Promise<T> {
   } catch {
     const html = text.trim().startsWith("<");
     const hint = html
-      ? "El servidor devolvió HTML en lugar de JSON (típico si usas solo Vite sin tom-bridge, o «vite preview» sin proxy)."
+      ? "El servidor devolvió HTML en lugar de JSON (la petición no llegó al handler de la API)."
       : `La respuesta no es JSON válido (HTTP ${res.status}).`;
     throw new Error(
-      `${hint} Usa la tienda en http://localhost:3847/tienda/ con tom-bridge en marcha, o en desarrollo: npm run dev en trejotienda Y tom-bridge a la vez.`
+      `${hint} En local: npm run dev (http://localhost:3000) y revisa la consola del servidor.`
     );
   }
 }

@@ -1,4 +1,5 @@
-import "dotenv/config";
+import { loadProjectEnv } from "./loadProjectEnv.mjs";
+loadProjectEnv();
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import cors from "cors";
@@ -13,12 +14,17 @@ const uploadRoot = path.join(__dirname, "..", "data", "store-uploads");
 
 let initPromise = null;
 
-/** Inicializa Mongo una sola vez por instancia (local o serverless). */
+/** Inicializa Mongo una sola vez por instancia (local o serverless). Si falla, se puede reintentar en la siguiente petición. */
 export function ensureServerReady() {
   if (!initPromise) {
     initPromise = (async () => {
-      const db = await getDb();
-      await ensureIndexes(db);
+      try {
+        const db = await getDb();
+        await ensureIndexes(db);
+      } catch (e) {
+        initPromise = null;
+        throw e;
+      }
     })();
   }
   return initPromise;
@@ -39,13 +45,21 @@ function vercelRewriteUrlFix(req, _res, next) {
 
   /** Vercel a veces pone `path` solo en `req.query` y `req.url` sin `?`. */
   let pathSeg = null;
-  if (typeof req.query?.path === "string" && req.query.path.trim()) {
-    pathSeg = req.query.path.trim();
-  } else {
+  if (req.query?.path != null) {
+    const raw = Array.isArray(req.query.path) ? req.query.path[0] : req.query.path;
+    if (typeof raw === "string" && raw.trim()) pathSeg = raw.trim();
+  }
+  if (!pathSeg) {
     const q = full.indexOf("?");
-    if (q !== -1) pathSeg = new URLSearchParams(full.slice(q + 1)).get("path");
+    if (q !== -1) pathSeg = new URLSearchParams(full.slice(q + 1)).get("path") || null;
   }
   if (!pathSeg || pathSeg.includes("..")) return next();
+
+  try {
+    pathSeg = decodeURIComponent(pathSeg);
+  } catch {
+    /* usar tal cual */
+  }
 
   if (pathname !== "/api/index" && pathname !== "/api") return next();
 
@@ -73,6 +87,8 @@ function vercelRewriteUrlFix(req, _res, next) {
   } else {
     req.url = `/api/${tail}${suffix}`;
   }
+  /** Express cachea la URL parseada; sin esto puede seguir enrutando a la ruta antigua. */
+  delete req._parsedUrl;
   next();
 }
 
@@ -83,6 +99,9 @@ export function createApp() {
   app.use(vercelRewriteUrlFix);
 
   app.use((req, res, next) => {
+    const pathOnly = String(req.path || "").split("?")[0];
+    /** Liveness sin Mongo (el handler no usa BD). */
+    if (pathOnly === "/api/health") return next();
     ensureServerReady()
       .then(() => next())
       .catch(next);

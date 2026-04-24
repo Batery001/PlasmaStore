@@ -181,7 +181,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
       const email = String(req.body?.email || "")
         .trim()
         .toLowerCase();
-      const password = String(req.body?.password || "");
+      const password = String(req.body?.password || "").trim();
       const name = String(req.body?.name || "").trim() || email.split("@")[0] || "usuario";
       if (!email || !email.includes("@")) return res.status(400).json({ ok: false, error: "Email inválido." });
       if (password.length < 6) return res.status(400).json({ ok: false, error: "La contraseña debe tener al menos 6 caracteres." });
@@ -211,7 +211,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
       const email = String(req.body?.email || req.body?.emailOrUser || "")
         .trim()
         .toLowerCase();
-      const password = String(req.body?.password || "");
+      const password = String(req.body?.password || "").trim();
       if (!email || !password) return res.status(400).json({ ok: false, error: "Faltan credenciales." });
       const row = await db.collection("store_users").findOne({ email });
       if (!row?.pass_hash) return res.status(401).json({ ok: false, error: "Usuario o contraseña incorrectos." });

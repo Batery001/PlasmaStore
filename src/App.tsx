@@ -1,16 +1,16 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AdminLayout } from "./admin/AdminLayout";
 import { Layout } from "./layout/Layout";
-import { Login } from "./pages/Login";
-import { Register } from "./pages/Register";
-import { Catalog } from "./pages/Catalog";
-import { Cart } from "./pages/Cart";
-import { AdminDashboard } from "./pages/AdminDashboard";
-import { AdminProducts } from "./pages/AdminProducts";
-import { AdminCarts } from "./pages/AdminCarts";
-import { AdminWidgets } from "./pages/AdminWidgets";
-import { AdminTournamentSprites } from "./pages/AdminTournamentSprites";
-import { Torneos } from "./pages/Torneos";
+import { Login } from "./screens/Login";
+import { Register } from "./screens/Register";
+import { Catalog } from "./screens/Catalog";
+import { Cart } from "./screens/Cart";
+import { AdminDashboard } from "./screens/AdminDashboard";
+import { AdminProducts } from "./screens/AdminProducts";
+import { AdminCarts } from "./screens/AdminCarts";
+import { AdminWidgets } from "./screens/AdminWidgets";
+import { AdminTournamentSprites } from "./screens/AdminTournamentSprites";
+import { Torneos } from "./screens/Torneos";
 
 export default function App() {
   return (

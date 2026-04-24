@@ -33,7 +33,7 @@ export function AdminProducts() {
     const ct = res.headers.get("content-type") || "";
     if (res.status === 404 && !ct.includes("application/json")) {
       throw new Error(
-        "El servidor respondió 404 (HTML) en lugar de la API de admin: casi seguro tom-bridge sigue en una versión antigua. Cierra el proceso que usa el puerto 3847 y ejecuta de nuevo npm run start en la carpeta tom-bridge."
+        "El servidor respondió 404 (HTML) en lugar de la API de admin: revisa despliegue y que las rutas /api lleguen al backend (Next + Express)."
       );
     }
     const data = await parseResponseJson<{ error?: string; products?: Product[] }>(res);

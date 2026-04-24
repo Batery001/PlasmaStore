@@ -1,4 +1,5 @@
-import "dotenv/config";
+import { loadProjectEnv } from "./loadProjectEnv.mjs";
+loadProjectEnv();
 import { PORT } from "./config.mjs";
 import { createApp, ensureServerReady } from "./app.mjs";
 

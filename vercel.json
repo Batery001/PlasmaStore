@@ -1,15 +1,7 @@
 {
   "functions": {
-    "api/index.mjs": {
+    "src/pages/api/[[...slug]].ts": {
       "maxDuration": 30
     }
-  },
-  "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/index" },
-    { "source": "/store-media/:path*", "destination": "/api/index" },
-    {
-      "source": "/((?!api/|assets/|store-media/).*)",
-      "destination": "/index.html"
-    }
-  ]
+  }
 }

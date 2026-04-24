@@ -78,7 +78,7 @@ export function AdminLayout() {
           </NavLink>
         </nav>
         <div className={styles.sidebarFooter}>
-          <a href={`${import.meta.env.BASE_URL}`}>← Volver a la tienda</a>
+          <a href="/">← Volver a la tienda</a>
           <button type="button" className={styles.linkbtn} onClick={() => logout()}>
             Cerrar sesión
           </button>

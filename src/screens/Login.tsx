@@ -25,7 +25,7 @@ export function Login() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email: loginId.trim(), password }),
+        body: JSON.stringify({ email: loginId.trim(), password: password.trim() }),
       });
       const data = await parseResponseJson<{ ok?: boolean; error?: string }>(res);
       if (!res.ok) throw new Error(data.error || "Error al entrar");

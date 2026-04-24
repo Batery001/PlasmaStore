@@ -1,27 +1,27 @@
 /**
  * Crea el primer usuario admin en MongoDB (solo si no hay ningún admin).
- * Uso: desde la carpeta server → npm run create-admin
- * Requiere en server/.env: MONGODB_URI, MONGODB_DB, ADMIN_EMAIL, ADMIN_PASSWORD
+ * Uso: desde la raíz del proyecto → npm run create-admin
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
-import { getDb } from "../src/mongo.mjs";
-import { nextSeq } from "../src/counters.mjs";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.join(__dirname, "..", ".env") });
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const { loadProjectEnv } = await import("../src/loadProjectEnv.mjs");
+loadProjectEnv(root);
+
+const { getDb } = await import("../src/mongo.mjs");
+const { nextSeq } = await import("../src/counters.mjs");
 
 const email = (process.env.ADMIN_EMAIL || "").trim().toLowerCase();
 const password = process.env.ADMIN_PASSWORD || "";
 
 if (!email || !email.includes("@")) {
-  console.error("Añade en server/.env: ADMIN_EMAIL=tu@email.com");
+  console.error("Añade ADMIN_EMAIL=tu@email.com en .env.local (raíz) o en .env");
   process.exit(1);
 }
 if (password.length < 6) {
-  console.error("Añade en server/.env: ADMIN_PASSWORD= (mínimo 6 caracteres)");
+  console.error("Añade ADMIN_PASSWORD= (mínimo 6 caracteres) en .env.local o .env");
   process.exit(1);
 }
 
@@ -35,7 +35,7 @@ if (adminCount > 0) {
 const exists = await db.collection("store_users").findOne({ email });
 if (exists) {
   console.error(
-    `Ya existe un usuario con el email ${email} (rol: ${exists.role}). Cambia ADMIN_EMAIL en .env o borra ese usuario en Atlas → Data Explorer.`
+    `Ya existe un usuario con el email ${email} (rol: ${exists.role}). Cambia ADMIN_EMAIL o borra ese usuario en Atlas → Data Explorer.`
   );
   process.exit(1);
 }
@@ -52,5 +52,5 @@ await db.collection("store_users").insertOne({
 });
 
 console.log(`Listo. Admin creado: ${email}`);
-console.log("Entra en https://TU-SITIO.vercel.app/login con ese email y contraseña, luego abre /admin");
+console.log("Entra en /login con ese email y contraseña, luego abre /admin");
 process.exit(0);
