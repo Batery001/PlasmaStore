@@ -1,6 +1,6 @@
 import { parse as parseCookie, serialize as serializeCookie } from "cookie";
 import crypto from "node:crypto";
-import { APP_SESSION_SECRET } from "./env";
+import { APP_SESSION_SECRET } from "./env.js";
 
 export type Json = Record<string, unknown> | unknown[] | string | number | boolean | null;
 

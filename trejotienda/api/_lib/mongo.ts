@@ -1,5 +1,5 @@
 import { MongoClient } from "mongodb";
-import { MONGODB_DB, MONGODB_URI } from "./env";
+import { MONGODB_DB, MONGODB_URI } from "./env.js";
 
 let cached: { client: MongoClient; promise: Promise<MongoClient> } | null = null;
 

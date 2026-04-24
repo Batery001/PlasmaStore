@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
-import { clearSessionCookie, json, makeSessionCookie, readJson, readSession } from "../_lib/http";
-import { ADMIN_EMAIL, ADMIN_PASSWORD, BOOTSTRAP_TOKEN } from "../_lib/env";
-import { mongoDb } from "../_lib/mongo";
+import { clearSessionCookie, json, makeSessionCookie, readJson, readSession } from "../_lib/http.js";
+import { ADMIN_EMAIL, ADMIN_PASSWORD, BOOTSTRAP_TOKEN } from "../_lib/env.js";
+import { mongoDb } from "../_lib/mongo.js";
 import { ObjectId } from "mongodb";
 
 function pathParts(req: any): string[] {

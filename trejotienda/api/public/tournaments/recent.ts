@@ -1,5 +1,5 @@
-import { json } from "../../../_lib/http";
-import { mongoDb } from "../../../_lib/mongo";
+import { json } from "../../../_lib/http.js";
+import { mongoDb } from "../../../_lib/mongo.js";
 
 function parseYmd(s: string | null): string | null {
   if (!s) return null;

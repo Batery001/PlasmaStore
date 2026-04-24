@@ -1,5 +1,5 @@
-import { json } from "./_lib/http";
-import { mongoDb } from "./_lib/mongo";
+import { json } from "./_lib/http.js";
+import { mongoDb } from "./_lib/mongo.js";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "GET") return json(res, 405, { ok: false, error: "Method not allowed" });

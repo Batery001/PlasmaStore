@@ -1,8 +1,8 @@
 import Busboy from "busboy";
-import { json } from "../_lib/http";
-import { mongoDb } from "../_lib/mongo";
-import { parseTdf } from "../_lib/tdf";
-import { parseTournamentDateString, ymd } from "../_lib/date";
+import { json } from "../_lib/http.js";
+import { mongoDb } from "../_lib/mongo.js";
+import { parseTdf } from "../_lib/tdf.js";
+import { parseTournamentDateString, ymd } from "../_lib/date.js";
 
 async function readMultipartTdf(req: any): Promise<{ fileName: string; text: string }> {
   return await new Promise((resolve, reject) => {
