@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import bcrypt from "bcryptjs";
 import multer from "multer";
+import { ObjectId } from "mongodb";
 import { nextSeq } from "./counters.mjs";
 import { clearSessionCookie, makeSessionCookie, readSession } from "./session.mjs";
 
@@ -11,6 +12,21 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 function deckRowKey(fileName, categoryCode, playId) {
   const cc = categoryCode !== "" && categoryCode != null ? String(categoryCode) : "_";
   return `${String(fileName)}|${cc}|${String(playId)}`;
+}
+
+/** `_id` numérico (app nueva) u ObjectId (datos viejos / otros orígenes). */
+function userIdFromSession(uidStr) {
+  const raw = String(uidStr || "").trim();
+  if (/^[a-f\d]{24}$/i.test(raw)) {
+    try {
+      return new ObjectId(raw);
+    } catch {
+      return null;
+    }
+  }
+  const n = parseInt(raw, 10);
+  if (Number.isFinite(n) && n > 0) return n;
+  return null;
 }
 
 function deleteStoredImageFile(uploadRoot, imageUrl) {
@@ -90,8 +106,8 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
   async function requireUser(req) {
     const s = readSession(req);
     if (!s) throw Object.assign(new Error("No autenticado."), { status: 401 });
-    const uid = parseInt(s.uid, 10);
-    if (!Number.isFinite(uid)) throw Object.assign(new Error("Sesión inválida."), { status: 401 });
+    const uid = userIdFromSession(s.uid);
+    if (uid == null) throw Object.assign(new Error("Sesión inválida."), { status: 401 });
     const db = await getDb();
     const u = await db.collection("store_users").findOne({ _id: uid }, { projection: { email: 1, name: 1, role: 1 } });
     if (!u) throw Object.assign(new Error("No autenticado."), { status: 401 });
@@ -143,8 +159,8 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
     try {
       const s = readSession(req);
       if (!s) return res.json({ user: null });
-      const uid = parseInt(s.uid, 10);
-      if (!Number.isFinite(uid)) return res.json({ user: null });
+      const uid = userIdFromSession(s.uid);
+      if (uid == null) return res.json({ user: null });
       const db = await getDb();
       const u = await db.collection("store_users").findOne({ _id: uid }, { projection: { email: 1, name: 1, role: 1 } });
       if (!u) return res.json({ user: null });
