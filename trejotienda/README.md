@@ -1,44 +1,44 @@
-# PlasmaStore (Vercel + Supabase)
+# PlasmaStore (Vercel + MongoDB)
 
-Este repo se despliega como **un solo proyecto** en Vercel (Root Directory: `trejotienda`) y usa **Supabase Postgres** para datos.
+Este proyecto se despliega como **un solo sitio** en Vercel (Root Directory: `trejotienda`). El frontend es **Vite + React** y las rutas `/api/*` son **funciones serverless** que hablan con **MongoDB Atlas**.
 
-## 1) Crear Supabase (Postgres)
+## 1) MongoDB Atlas
 
-- Crea un proyecto en Supabase.
-- En el SQL editor ejecuta `supabase-schema.sql`.
-- (Opcional) crea un admin:
+- Crea un cluster y un usuario de base de datos.
+- En **Network Access**, permite el acceso que necesites (típico en demos: `0.0.0.0/0`).
+- Copia el **connection string** (SRV) y elige una base de datos (por defecto el código usa `plasmastore` si no configuras otra).
 
-```sql
-insert into public.store_users (email, name, role, pass_hash)
-values ('admin@demo.com','admin','admin','$2a$10$REEMPLAZA_CON_HASH_BCRYPT');
-```
+No hace falta crear colecciones a mano: la app las crea al escribir.
 
-## 2) Variables de entorno en Vercel
+> `supabase-schema.sql` es legado/nombre confuso: **no aplica** si estás en modo Mongo.
 
-En el proyecto de Vercel (el de `trejotienda`) agrega:
+## 2) Variables de entorno en Vercel (Production)
 
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `APP_SESSION_SECRET` (una frase larga aleatoria)
-
-### Bootstrap admin (para “llegar y usar”)
-
-Agrega además:
-
-- `BOOTSTRAP_TOKEN` (token secreto para crear el primer admin)
+- `MONGODB_URI`
+- `MONGODB_DB` (opcional; por defecto `plasmastore`)
+- `APP_SESSION_SECRET` (frase larga aleatoria)
+- `BOOTSTRAP_TOKEN` (secreto para crear el **primer** admin)
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`
 
-Luego, **una sola vez**:
+## 3) Bootstrap del primer admin (una sola vez)
+
+Después del deploy, ejecuta **una vez**:
 
 ```powershell
-curl.exe -X POST "https://TU-DOMINIO.vercel.app/api/store/bootstrap-admin" `
+curl.exe -i -X POST "https://TU-DOMINIO.vercel.app/api/store/bootstrap-admin" `
   -H "x-bootstrap-token: TU_BOOTSTRAP_TOKEN"
 ```
 
-Después inicia sesión en la web con `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+Luego inicia sesión en la web con `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
 
-## 3) Endpoints (mismo dominio)
+Si ya existen usuarios en `store_users`, el bootstrap responde **409** (bloqueado).
+
+## 4) `vercel.json` (SPA + API en el mismo dominio)
+
+El fallback a `index.html` **no debe** capturar `/api/*` (si no, verás `405`/`index.html` en POST a APIs). En este repo el patrón queda excluyendo `/api/`.
+
+## 5) Endpoints (mismo dominio)
 
 - `POST /api/admin/upload-tdf` (multipart, campo `tdf`)
 - `GET /api/public/tournaments/recent`
@@ -49,53 +49,15 @@ Después inicia sesión en la web con `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
 - `POST /api/store/login`
 - `POST /api/store/logout`
 - `GET /api/store/me`
+- `POST /api/store/bootstrap-admin` (bootstrap)
 - `GET/PATCH /api/store/admin/tournament-deck-overrides` (admin)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## 6) Desarrollo local
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```powershell
+Set-Location trejotienda
+npm install
+npm run dev
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
-
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
-
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
-```
+Para probar APIs localmente necesitas las mismas variables de entorno en tu entorno (por ejemplo un `.env.local` que tu tooling cargue, o exportarlas en la terminal).
