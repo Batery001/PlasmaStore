@@ -6,6 +6,7 @@ import express from "express";
 import multer from "multer";
 import session from "express-session";
 import { getStoreDb } from "./store-db.mjs";
+import { readDeckOverrides, writeDeckOverrides, deckRowKey } from "./tournament-overrides.mjs";
 
 const SESSION_SECRET = process.env.SESSION_SECRET || "trejotienda-dev-cambia-en-produccion";
 
@@ -363,6 +364,56 @@ export function mountStoreAndSession(app) {
         cartValueCents: cartAgg.valueCents,
       },
     });
+  });
+
+  app.get("/api/store/admin/tournament-deck-overrides", requireAuth, requireAdmin, (_req, res) => {
+    res.json({ ok: true, overrides: readDeckOverrides() });
+  });
+
+  app.patch("/api/store/admin/tournament-deck-overrides", requireAuth, requireAdmin, (req, res) => {
+    const fileName = String(req.body?.fileName || "").trim();
+    const categoryCode = req.body?.categoryCode != null ? String(req.body.categoryCode) : "";
+    const playId = String(req.body?.playId || "").trim();
+    if (!fileName || !playId) {
+      return res.status(400).json({ ok: false, error: "fileName y playId son obligatorios." });
+    }
+    const key = deckRowKey(fileName, categoryCode, playId);
+    const all = readDeckOverrides();
+    if (req.body?.remove === true) {
+      delete all[key];
+      writeDeckOverrides(all);
+      return res.json({ ok: true, key, entry: null, overrides: all });
+    }
+    const prev = all[key] && typeof all[key] === "object" ? all[key] : {};
+    const sprites = Array.isArray(req.body?.sprites)
+      ? req.body.sprites.map((u) => String(u).trim()).filter(Boolean).slice(0, 4)
+      : Array.isArray(prev.sprites)
+        ? prev.sprites
+        : [];
+    let countryCode = "";
+    if (req.body?.countryCode !== undefined && req.body?.countryCode !== null) {
+      const raw = String(req.body.countryCode).trim();
+      countryCode = raw.length === 2 ? raw.toUpperCase() : "";
+    } else if (typeof prev.countryCode === "string" && prev.countryCode.length === 2) {
+      countryCode = prev.countryCode.toUpperCase();
+    }
+    let listUrl = "";
+    if (req.body?.listUrl !== undefined && req.body?.listUrl !== null) {
+      listUrl = String(req.body.listUrl).trim().slice(0, 2000);
+    } else if (typeof prev.listUrl === "string") {
+      listUrl = prev.listUrl.trim().slice(0, 2000);
+    }
+    /** @type {{ sprites: string[]; countryCode?: string; listUrl?: string }} */
+    const entry = { sprites };
+    if (countryCode) entry.countryCode = countryCode;
+    if (listUrl) entry.listUrl = listUrl;
+    if (!entry.sprites.length && !entry.countryCode && !entry.listUrl) {
+      delete all[key];
+    } else {
+      all[key] = entry;
+    }
+    writeDeckOverrides(all);
+    return res.json({ ok: true, key, entry: all[key] || null, overrides: all });
   });
 
   app.get("/api/store/admin/widgets", requireAuth, requireAdmin, (_req, res) => {

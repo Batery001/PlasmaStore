@@ -119,6 +119,85 @@
   color: #666;
 }
 
+.topbarInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.bellWrap {
+  position: relative;
+}
+
+.bellBtn {
+  position: relative;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #f5f5f5;
+  cursor: pointer;
+  font-size: 1.15rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bellBtn:hover {
+  background: #eaeaea;
+  border-color: #999;
+}
+
+.bellBadge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #d9534f;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+.bellPanel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: min(360px, calc(100vw - 2rem));
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.18);
+  padding: 1rem 1.1rem;
+  z-index: 200;
+}
+
+.bellPanelTitle {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin: 0 0 0.5rem;
+  color: #222;
+}
+
+.bellPanelRow {
+  font-size: 0.86rem;
+  margin: 0.35rem 0;
+  color: #444;
+}
+
+.bellPanelActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eee;
+}
+
 .content {
   flex: 1;
   padding: 1.25rem 1.5rem 2rem;
@@ -226,6 +305,17 @@
   background: #fafafa;
 }
 
+.spriteDeckRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.spriteDeckRow > span {
+  margin-inline: -0.875rem;
+}
+
 .inputSm {
   width: 4.5rem;
   padding: 0.35rem 0.45rem;
@@ -248,6 +338,8 @@
   background: #f8f8f8;
   cursor: pointer;
   color: #333;
+  text-decoration: none;
+  text-align: center;
 }
 
 .btn:hover {
@@ -263,6 +355,8 @@
   background: #46a546;
   cursor: pointer;
   color: #fff;
+  text-decoration: none;
+  text-align: center;
 }
 
 .btnPrimary:hover {

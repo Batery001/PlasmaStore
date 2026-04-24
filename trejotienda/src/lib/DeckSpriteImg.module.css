@@ -1,0 +1,94 @@
+.wrap {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.55);
+  background: rgba(248, 250, 252, 0.95);
+  /* Evita hueco “debajo” del img por baseline / strut en algunos navegadores */
+  line-height: 0;
+}
+
+/* Sprite suelto: sin caja; altura = la del dibujo (no estira hacia arriba). */
+.wrapPlain {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: visible;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  outline: none;
+  padding: 0;
+  margin: 0;
+  line-height: 0;
+}
+
+/* Iconos pixel (menú PokeAPI / Limitless): un poco más grandes y centrados en la caja */
+.wrapPixelBoost {
+  padding: 1px;
+}
+
+.wrapDark {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.img {
+  box-sizing: border-box;
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: center center;
+}
+
+.imgScaled {
+  transform-origin: center center;
+}
+
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  -ms-interpolation-mode: nearest-neighbor;
+}
+
+.smooth {
+  image-rendering: auto;
+}
+
+/* Modo plain: sin caja fija; el bitmap se ancla abajo para no dejar aire encima. */
+.imgPlain {
+  max-width: none;
+  max-height: none;
+  object-position: center bottom;
+}
+
+.fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-radius: 8px;
+  border: 1px dashed rgba(148, 163, 184, 0.6);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  background: rgba(241, 245, 249, 0.9);
+}
+
+.fallbackDark {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--muted, #a78bfa);
+  background: rgba(0, 0, 0, 0.25);
+}

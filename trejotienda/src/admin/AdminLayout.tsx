@@ -1,5 +1,6 @@
 import { NavLink, Outlet, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { AdminTournamentBell } from "./AdminTournamentBell";
 import styles from "./admin.module.css";
 
 export function AdminLayout() {
@@ -66,6 +67,15 @@ export function AdminLayout() {
           >
             Carritos activos
           </NavLink>
+          <div className={styles.navSection}>Torneos</div>
+          <NavLink
+            to="/admin/torneos-sprites"
+            className={({ isActive }) =>
+              isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
+            }
+          >
+            Sprites y listas
+          </NavLink>
         </nav>
         <div className={styles.sidebarFooter}>
           <a href={`${import.meta.env.BASE_URL}`}>← Volver a la tienda</a>
@@ -76,7 +86,12 @@ export function AdminLayout() {
       </aside>
       <div className={styles.mainWrap}>
         <header className={styles.topbar}>
-          Administración · {user.name} ({user.email})
+          <div className={styles.topbarInner}>
+            <span>
+              Administración · {user.name} ({user.email})
+            </span>
+            <AdminTournamentBell />
+          </div>
         </header>
         <main className={styles.content}>
           <Outlet />

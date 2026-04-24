@@ -1,0 +1,263 @@
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: flex-end;
+  margin-bottom: 1.25rem;
+}
+
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.filterField label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.filterField input {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 0.45rem 0.55rem;
+  font-size: 0.9rem;
+}
+
+.tBlock {
+  margin-bottom: 2rem;
+}
+
+.tMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin-bottom: 0.65rem;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.tTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 0.35rem;
+  color: var(--text);
+}
+
+/* Leaderboard — fondo #0c081a, tarjeta #1a152e, divisores #3c325c (referencia) */
+.leaderboardZone {
+  --lb-bg-night: #0c081a;
+  --lb-bg-surface: #1a152e;
+  --lb-border: #3c325c;
+  --lb-fg: #ffffff;
+  --lb-no-deck: #6a6480;
+  --lb-link: #a5b4fc;
+  --lb-link-hover: #e0e7ff;
+  /* Alto del recorte en Torneos: maxDim(75) - shave(14) = 61px */
+  --lb-row-h: 61px;
+  background: var(--lb-bg-night);
+  border-radius: 12px;
+  padding: 0.65rem;
+  margin-top: 0.35rem;
+}
+
+.tableWrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--lb-border);
+  background: var(--lb-bg-surface);
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.84rem;
+  line-height: 1.05;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--lb-fg);
+}
+
+.table thead th {
+  text-align: left;
+  padding: 0.06rem 0.5rem;
+  font-weight: 700;
+  color: var(--lb-fg);
+  background: rgba(0, 0, 0, 0.22);
+  border-bottom: 1px solid var(--lb-border);
+  border-right: 1px solid var(--lb-border);
+  vertical-align: middle;
+  line-height: 1.05;
+}
+
+.table thead th:last-child {
+  border-right: none;
+}
+
+.colPlace {
+  width: 12%;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.colPlayer {
+  width: 38%;
+  text-align: left;
+}
+
+.colDeck {
+  width: 50%;
+  min-width: 0;
+  text-align: left;
+}
+
+.table tbody tr:nth-child(odd) {
+  background: transparent;
+}
+
+.table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.table tbody tr:hover {
+  background: rgba(60, 50, 92, 0.45);
+}
+
+.table tbody tr {
+  height: var(--lb-row-h);
+}
+
+.table td {
+  padding: 0;
+  border-bottom: 1px solid var(--lb-border);
+  border-right: 1px solid var(--lb-border);
+  vertical-align: middle;
+}
+
+.table td:last-child {
+  border-right: none;
+}
+
+/* Mazo: sin padding vertical */
+.table td.deckCell {
+  padding-block: 0;
+  padding-inline: 0.4rem;
+}
+
+.cellVCenter {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding-inline: 0.5rem;
+}
+
+.placeCell {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--lb-fg);
+  text-align: center;
+  line-height: 1;
+}
+
+.playerCell {
+  font-weight: 600;
+  color: var(--lb-fg);
+  text-align: left;
+  vertical-align: middle;
+  line-height: 1.05;
+}
+
+.playerCellInner {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.1rem 0.28rem;
+}
+
+.playerCellLeader {
+  font-weight: 800;
+}
+
+.playerCellLeader .playerLink {
+  font-weight: 800;
+}
+
+.playerLink {
+  color: var(--lb-link);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.playerLink:hover {
+  color: var(--lb-link-hover);
+  text-decoration: underline;
+}
+
+.flagInline {
+  font-size: 1.02rem;
+  line-height: 1;
+  vertical-align: middle;
+  display: inline-block;
+}
+
+.deckCell {
+  padding: 0;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.deckCellInner {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 0;
+  padding: 0;
+  height: 100%;
+}
+
+/* Corona proporcional al texto (referencia ~0.8em) */
+.crown {
+  display: inline-block;
+  flex-shrink: 0;
+  font-size: 0.8em;
+  line-height: 1;
+  vertical-align: middle;
+  opacity: 0.95;
+  filter: saturate(1.15);
+}
+
+.spriteRow {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 0;
+  align-items: center;
+  justify-content: flex-start;
+  vertical-align: middle;
+  line-height: 0;
+}
+
+/* Pegados: solape entre cajas (el ancho real ya se reduce con plainSquareCoverWidthScale) */
+.spriteRow > span + span {
+  margin-inline-start: -0.55rem;
+}
+
+/* Marcador sin mazo — gris discreto */
+.emptyDeck {
+  display: block;
+  margin: 0;
+  max-width: 12rem;
+  text-align: left;
+  color: var(--lb-no-deck);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+  user-select: none;
+}

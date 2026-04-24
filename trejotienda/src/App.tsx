@@ -9,6 +9,8 @@ import { AdminDashboard } from "./pages/AdminDashboard";
 import { AdminProducts } from "./pages/AdminProducts";
 import { AdminCarts } from "./pages/AdminCarts";
 import { AdminWidgets } from "./pages/AdminWidgets";
+import { AdminTournamentSprites } from "./pages/AdminTournamentSprites";
+import { Torneos } from "./pages/Torneos";
 
 export default function App() {
   return (
@@ -19,12 +21,14 @@ export default function App() {
         <Route path="productos" element={<AdminProducts />} />
         <Route path="widgets" element={<AdminWidgets />} />
         <Route path="carritos" element={<AdminCarts />} />
+        <Route path="torneos-sprites" element={<AdminTournamentSprites />} />
       </Route>
       <Route path="/" element={<Layout />}>
         <Route index element={<Navigate to="catalogo" replace />} />
         <Route path="login" element={<Login />} />
         <Route path="registro" element={<Register />} />
         <Route path="catalogo" element={<Catalog />} />
+        <Route path="torneos" element={<Torneos />} />
         <Route path="carrito" element={<Cart />} />
         <Route path="*" element={<Navigate to="catalogo" replace />} />
       </Route>

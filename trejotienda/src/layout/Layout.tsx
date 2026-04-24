@@ -13,6 +13,7 @@ export function Layout() {
         </Link>
         <nav className={styles.nav}>
           <Link to="/catalogo">Catálogo</Link>
+          <Link to="/torneos">Torneos</Link>
           <Link to="/carrito">Carrito</Link>
           {user?.role === "admin" && <Link to="/admin">Administración</Link>}
           {loading ? (
@@ -39,8 +40,7 @@ export function Layout() {
         <Outlet />
       </main>
       <footer className={styles.footer}>
-        Plasma Store · catálogo y carrito · precios en CLP (demo). La vista de standings de torneos se integrará
-        más adelante, paso a paso.
+        Plasma Store · catálogo, torneos y carrito · precios en CLP (demo).
       </footer>
     </div>
   );
