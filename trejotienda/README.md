@@ -31,8 +31,8 @@ Agrega además:
 
 Luego, **una sola vez**:
 
-```bash
-curl -X POST "https://TU-DOMINIO.vercel.app/api/store/bootstrap-admin" ^
+```powershell
+curl.exe -X POST "https://TU-DOMINIO.vercel.app/api/store/bootstrap-admin" `
   -H "x-bootstrap-token: TU_BOOTSTRAP_TOKEN"
 ```
 
