@@ -16,6 +16,7 @@ function deckRowKey(fileName, categoryCode, playId) {
 function deleteStoredImageFile(uploadRoot, imageUrl) {
   if (!imageUrl || typeof imageUrl !== "string") return;
   const trimmed = imageUrl.trim();
+  if (trimmed.startsWith("data:")) return;
   if (!trimmed.startsWith("/store-media/")) return;
   const rel = trimmed.slice("/store-media/".length);
   const abs = path.join(uploadRoot, rel);
@@ -31,20 +32,40 @@ function deleteStoredImageFile(uploadRoot, imageUrl) {
  * @param {import('express').Express} app
  * @param {{ getDb: () => Promise<import('mongodb').Db>, uploadRoot: string }} ctx
  */
+const IS_VERCEL = Boolean(process.env.VERCEL);
+
+function multerImageUrl(req) {
+  if (!req.file) return null;
+  if (req.file.buffer && Buffer.isBuffer(req.file.buffer)) {
+    const mime = req.file.mimetype || "image/jpeg";
+    return `data:${mime};base64,${req.file.buffer.toString("base64")}`;
+  }
+  if (req.file.filename) return `/store-media/products/${req.file.filename}`;
+  return null;
+}
+
 export function mountStoreRoutes(app, { getDb, uploadRoot }) {
   const PRODUCTS_DIR = path.join(uploadRoot, "products");
-  fs.mkdirSync(PRODUCTS_DIR, { recursive: true });
+  if (!IS_VERCEL) {
+    try {
+      fs.mkdirSync(PRODUCTS_DIR, { recursive: true });
+    } catch {
+      /* ignore */
+    }
+  }
 
   const uploadProductImage = multer({
-    storage: multer.diskStorage({
-      destination: (_req, _file, cb) => cb(null, PRODUCTS_DIR),
-      filename: (_req, file, cb) => {
-        const ext = path.extname(file.originalname || "").toLowerCase();
-        const ok = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif"];
-        const e = ok.includes(ext) ? ext : ".jpg";
-        cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 12)}${e}`);
-      },
-    }),
+    storage: IS_VERCEL
+      ? multer.memoryStorage()
+      : multer.diskStorage({
+          destination: (_req, _file, cb) => cb(null, PRODUCTS_DIR),
+          filename: (_req, file, cb) => {
+            const ext = path.extname(file.originalname || "").toLowerCase();
+            const ok = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif"];
+            const e = ok.includes(ext) ? ext : ".jpg";
+            cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 12)}${e}`);
+          },
+        }),
     limits: { fileSize: 4 * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {
       if (/^image\/(jpeg|png|gif|webp|avif)$/i.test(file.mimetype)) cb(null, true);
@@ -598,7 +619,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
       if (!Number.isFinite(price_cents) || price_cents < 0) return res.status(400).json({ ok: false, error: "Precio inválido (price_cents)." });
       let image_url = null;
       if (req.file) {
-        image_url = `/store-media/products/${req.file.filename}`;
+        image_url = multerImageUrl(req);
       } else if (req.body?.image_url != null && String(req.body.image_url).trim() !== "") {
         image_url = String(req.body.image_url).trim();
       }
@@ -663,7 +684,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
 
       if (req.file) {
         if (prevRow.image_url) deleteStoredImageFile(uploadRoot, prevRow.image_url);
-        $set.image_url = `/store-media/products/${req.file.filename}`;
+        $set.image_url = multerImageUrl(req);
       } else if (req.body?.clear_image === true || req.body?.clear_image === "1") {
         if (prevRow.image_url) deleteStoredImageFile(uploadRoot, prevRow.image_url);
         $set.image_url = null;

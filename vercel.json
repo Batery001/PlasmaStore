@@ -1,8 +1,14 @@
 {
+  "functions": {
+    "api/index.mjs": {
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
-    { "source": "/assets/:path*", "destination": "/assets/:path*" },
+    { "source": "/api/:path*", "destination": "/api/index" },
+    { "source": "/store-media/:path*", "destination": "/api/index" },
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|assets/|store-media/).*)",
       "destination": "/index.html"
     }
   ]
