@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.mjs",
-    "dev": "node --watch src/index.mjs"
+    "dev": "node --watch src/index.mjs",
+    "create-admin": "node scripts/create-admin.mjs"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
