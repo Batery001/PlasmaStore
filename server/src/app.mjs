@@ -27,9 +27,37 @@ export function ensureServerReady() {
 /**
  * @returns {import('express').Express}
  */
+/**
+ * Vercel reescribe /api/store/login → /api/index?path=store/login (y /store-media/… igual).
+ * Sin esto, Express no coincide con rutas /api/store/... y falla el login y el resto de la API.
+ */
+function vercelRewriteUrlFix(req, _res, next) {
+  if (!process.env.VERCEL) return next();
+  const raw = req.url || "";
+  const q = raw.indexOf("?");
+  if (q === -1) return next();
+  const pathname = raw.slice(0, q);
+  if (pathname !== "/api/index" && pathname !== "/api") return next();
+  const params = new URLSearchParams(raw.slice(q + 1));
+  const pathSeg = params.get("path");
+  if (!pathSeg || pathSeg.includes("..")) return next();
+  params.delete("path");
+  const rest = params.toString();
+  const suffix = rest ? `?${rest}` : "";
+  const tail = pathSeg.replace(/^\/+/, "");
+  if (tail.startsWith("store-media/") || tail === "store-media") {
+    req.url = `/${tail}${suffix}`;
+  } else {
+    req.url = `/api/${tail}${suffix}`;
+  }
+  next();
+}
+
 export function createApp() {
   const app = express();
   app.set("trust proxy", 1);
+
+  app.use(vercelRewriteUrlFix);
 
   app.use((req, res, next) => {
     ensureServerReady()
