@@ -1,4 +1,38 @@
-# React + TypeScript + Vite
+# PlasmaStore (Vercel + Supabase)
+
+Este repo se despliega como **un solo proyecto** en Vercel (Root Directory: `trejotienda`) y usa **Supabase Postgres** para datos.
+
+## 1) Crear Supabase (Postgres)
+
+- Crea un proyecto en Supabase.
+- En el SQL editor ejecuta `supabase-schema.sql`.
+- (Opcional) crea un admin:
+
+```sql
+insert into public.store_users (email, name, role, pass_hash)
+values ('admin@demo.com','admin','admin','$2a$10$REEMPLAZA_CON_HASH_BCRYPT');
+```
+
+## 2) Variables de entorno en Vercel
+
+En el proyecto de Vercel (el de `trejotienda`) agrega:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `APP_SESSION_SECRET` (una frase larga aleatoria)
+
+## 3) Endpoints (mismo dominio)
+
+- `POST /api/admin/upload-tdf` (multipart, campo `tdf`)
+- `GET /api/public/tournaments/recent`
+- `GET /api/pending`
+- `GET /api/store/products`
+- `GET /api/store/carousel`
+- `POST /api/store/register`
+- `POST /api/store/login`
+- `POST /api/store/logout`
+- `GET /api/store/me`
+- `GET/PATCH /api/store/admin/tournament-deck-overrides` (admin)
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

@@ -1,0 +1,87 @@
+import Busboy from "busboy";
+import { json } from "../_lib/http";
+import { supabaseAdmin } from "../_lib/supabase";
+import { parseTdf } from "../_lib/tdf";
+import { parseTournamentDateString, ymd } from "../_lib/date";
+
+async function readMultipartTdf(req: any): Promise<{ fileName: string; text: string }> {
+  return await new Promise((resolve, reject) => {
+    const bb = Busboy({ headers: req.headers, limits: { fileSize: 3 * 1024 * 1024, files: 1 } });
+    let fileName = "";
+    let buf: Buffer[] = [];
+    let sawFile = false;
+
+    bb.on("file", (fieldname, file, info) => {
+      if (fieldname !== "tdf") {
+        file.resume();
+        return;
+      }
+      sawFile = true;
+      fileName = info?.filename || "upload.tdf";
+      file.on("data", (d) => buf.push(d));
+      file.on("limit", () => reject(new Error("Archivo demasiado grande.")));
+    });
+    bb.on("error", (e) => reject(e));
+    bb.on("finish", () => {
+      if (!sawFile) return reject(new Error("Falta el archivo .tdf (campo del formulario: tdf)."));
+      const text = Buffer.concat(buf).toString("utf8");
+      resolve({ fileName, text });
+    });
+    req.pipe(bb);
+  });
+}
+
+export default async function handler(req: any, res: any) {
+  if (req.method !== "POST") return json(res, 405, { ok: false, error: "Method not allowed" });
+
+  try {
+    const { fileName, text } = await readMultipartTdf(req);
+    const base = String(fileName).split(/[\\/]/).pop() || "upload.tdf";
+    const mtimeMs = Date.now();
+    const parsed = parseTdf(text, base);
+    const payload = parsed.ok ? parsed.payload : null;
+    const parseError = parsed.ok ? null : parsed.error || "Error al parsear";
+    const hasFinishedStandings = !!(
+      payload &&
+      Array.isArray((payload as any).categories) &&
+      (payload as any).categories.some((c: any) => Array.isArray(c?.standings) && c.standings.length > 0)
+    );
+
+    const eff = payload?.tournamentStartDate ? parseTournamentDateString(String(payload.tournamentStartDate)) : null;
+    const effectiveDate = ymd(eff || new Date(mtimeMs));
+
+    const sb = supabaseAdmin();
+
+    // snapshot
+    const { error: e1 } = await sb.from("standings_snapshots").insert({
+      file_name: base,
+      mtime_ms: mtimeMs,
+      parse_error: parseError,
+      payload,
+      has_finished_standings: hasFinishedStandings,
+      effective_date: effectiveDate,
+    });
+    if (e1) return json(res, 500, { ok: false, error: e1.message });
+
+    // pending “puntero”
+    const { error: e2 } = await sb.from("standings_pending").upsert(
+      {
+        id: 1,
+        file_name: base,
+        mtime_ms: mtimeMs,
+        parse_error: parseError,
+        payload,
+      },
+      { onConflict: "id" }
+    );
+    if (e2) return json(res, 500, { ok: false, error: e2.message });
+
+    return json(res, 200, {
+      ok: !parseError,
+      pending: { fileName: base, mtimeMs, payload, parseError, hasFinishedStandings },
+    });
+  } catch (e) {
+    return json(res, 400, { ok: false, error: e instanceof Error ? e.message : String(e) });
+  }
+}
+
