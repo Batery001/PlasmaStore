@@ -3,7 +3,8 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  base: "/tienda/",
+  // Producción en la raíz (/). En local se mantiene el proxy /api.
+  base: "/",
   server: {
     port: 5174,
     proxy: {

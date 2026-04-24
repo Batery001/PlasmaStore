@@ -1,9 +1,7 @@
 {
   "rewrites": [
-    { "source": "/tienda/assets/:path*", "destination": "/assets/:path*" },
-    { "source": "/tienda", "destination": "/index.html" },
-    { "source": "/tienda/", "destination": "/index.html" },
-    { "source": "/tienda/:path*", "destination": "/index.html" }
-  ],
-  "redirects": [{ "source": "/", "destination": "/tienda/", "permanent": false }]
+    { "source": "/assets/:path*", "destination": "/assets/:path*" },
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/:path*", "destination": "/index.html" }
+  ]
 }
