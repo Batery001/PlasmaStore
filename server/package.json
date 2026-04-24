@@ -7,6 +7,7 @@
     "dev": "node --watch src/index.mjs"
   },
   "dependencies": {
+    "dotenv": "^16.4.7",
     "bcryptjs": "^3.0.3",
     "cookie": "^1.1.1",
     "cors": "^2.8.5",
