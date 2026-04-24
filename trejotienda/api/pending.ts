@@ -1,28 +1,27 @@
 import { json } from "./_lib/http";
-import { supabaseAdmin } from "./_lib/supabase";
+import { mongoDb } from "./_lib/mongo";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "GET") return json(res, 405, { ok: false, error: "Method not allowed" });
-  const sb = supabaseAdmin();
-  const { data, error } = await sb
-    .from("standings_pending")
-    .select("file_name, mtime_ms, parse_error, payload")
-    .eq("id", 1)
-    .maybeSingle();
-  if (error) return json(res, 500, { ok: false, error: error.message });
-  if (!data?.file_name) return json(res, 200, { ok: true, pending: { fileName: "", mtimeMs: 0, payload: null, parseError: null, hasFinishedStandings: false } });
+  const db = await mongoDb();
+  const doc: any = await db.collection("standings_pending").findOne({ _id: 1 });
+  if (!doc?.fileName)
+    return json(res, 200, {
+      ok: true,
+      pending: { fileName: "", mtimeMs: 0, payload: null, parseError: null, hasFinishedStandings: false },
+    });
   const hasFinishedStandings = !!(
-    data.payload &&
-    Array.isArray((data.payload as any).categories) &&
-    (data.payload as any).categories.some((c: any) => Array.isArray(c?.standings) && c.standings.length > 0)
+    doc.payload &&
+    Array.isArray((doc.payload as any).categories) &&
+    (doc.payload as any).categories.some((c: any) => Array.isArray(c?.standings) && c.standings.length > 0)
   );
   return json(res, 200, {
-    ok: !data.parse_error,
+    ok: !doc.parseError,
     pending: {
-      fileName: data.file_name,
-      mtimeMs: data.mtime_ms,
-      payload: data.payload,
-      parseError: data.parse_error,
+      fileName: doc.fileName,
+      mtimeMs: doc.mtimeMs,
+      payload: doc.payload,
+      parseError: doc.parseError,
       hasFinishedStandings,
     },
   });

@@ -1,6 +1,6 @@
 import Busboy from "busboy";
 import { json } from "../_lib/http";
-import { supabaseAdmin } from "../_lib/supabase";
+import { mongoDb } from "../_lib/mongo";
 import { parseTdf } from "../_lib/tdf";
 import { parseTournamentDateString, ymd } from "../_lib/date";
 
@@ -50,31 +50,31 @@ export default async function handler(req: any, res: any) {
     const eff = payload?.tournamentStartDate ? parseTournamentDateString(String(payload.tournamentStartDate)) : null;
     const effectiveDate = ymd(eff || new Date(mtimeMs));
 
-    const sb = supabaseAdmin();
+    const db = await mongoDb();
 
-    // snapshot
-    const { error: e1 } = await sb.from("standings_snapshots").insert({
-      file_name: base,
-      mtime_ms: mtimeMs,
-      parse_error: parseError,
+    await db.collection("standings_snapshots").insertOne({
+      fileName: base,
+      mtimeMs,
+      effectiveDate,
+      parseError,
       payload,
-      has_finished_standings: hasFinishedStandings,
-      effective_date: effectiveDate,
+      hasFinishedStandings,
+      createdAt: new Date(),
     });
-    if (e1) return json(res, 500, { ok: false, error: e1.message });
 
-    // pending “puntero”
-    const { error: e2 } = await sb.from("standings_pending").upsert(
+    await db.collection("standings_pending").updateOne(
+      { _id: 1 },
       {
-        id: 1,
-        file_name: base,
-        mtime_ms: mtimeMs,
-        parse_error: parseError,
-        payload,
+        $set: {
+          fileName: base,
+          mtimeMs,
+          parseError,
+          payload,
+          updatedAt: new Date(),
+        },
       },
-      { onConflict: "id" }
+      { upsert: true }
     );
-    if (e2) return json(res, 500, { ok: false, error: e2.message });
 
     return json(res, 200, {
       ok: !parseError,

@@ -1,6 +1,5 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { json } from "../../../_lib/http";
-import { supabaseAdmin } from "../../../_lib/supabase";
+import { mongoDb } from "../../../_lib/mongo";
 
 function parseYmd(s: string | null): string | null {
   if (!s) return null;
@@ -9,34 +8,32 @@ function parseYmd(s: string | null): string | null {
   return t;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   if (req.method !== "GET") return json(res, 405, { ok: false, error: "Method not allowed" });
 
   const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit ?? "5"), 10) || 5));
   const from = parseYmd(typeof req.query.from === "string" ? req.query.from : null);
   const to = parseYmd(typeof req.query.to === "string" ? req.query.to : null);
 
-  const sb = supabaseAdmin();
-  let q = sb
-    .from("standings_snapshots")
-    .select("file_name, mtime_ms, parse_error, payload, has_finished_standings, effective_date")
-    .order("effective_date", { ascending: false })
-    .limit(limit);
+  const db = await mongoDb();
+  const match: any = {};
+  if (from) match.effectiveDate = { ...(match.effectiveDate || {}), $gte: from };
+  if (to) match.effectiveDate = { ...(match.effectiveDate || {}), $lte: to };
 
-  if (from) q = q.gte("effective_date", from);
-  if (to) q = q.lte("effective_date", to);
+  const rows = await db
+    .collection("standings_snapshots")
+    .find(match)
+    .sort({ effectiveDate: -1 })
+    .limit(limit)
+    .toArray();
 
-  const { data, error } = await q;
-  if (error) return json(res, 500, { ok: false, error: error.message });
-
-  const tournaments =
-    (data || []).map((r) => ({
-      fileName: r.file_name,
-      mtimeMs: r.mtime_ms,
-      parseError: r.parse_error,
-      payload: r.payload,
-      hasFinishedStandings: r.has_finished_standings,
-    })) ?? [];
+  const tournaments = rows.map((r: any) => ({
+    fileName: r.fileName,
+    mtimeMs: r.mtimeMs,
+    parseError: r.parseError ?? null,
+    payload: r.payload ?? null,
+    hasFinishedStandings: Boolean(r.hasFinishedStandings),
+  }));
 
   // overrides “slim”: solo llaves que aparecen en los torneos entregados.
   const keys = new Set<string>();
@@ -58,12 +55,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   let overrides: Record<string, any> = {};
   if (keys.size > 0) {
-    const { data: ovs, error: e2 } = await sb
-      .from("tournament_deck_overrides")
-      .select("k, entry")
-      .in("k", Array.from(keys).slice(0, 5000));
-    if (e2) return json(res, 500, { ok: false, error: e2.message });
-    overrides = Object.fromEntries((ovs || []).map((r) => [r.k, r.entry]));
+    const ovs = await db
+      .collection("tournament_deck_overrides")
+      .find({ k: { $in: Array.from(keys).slice(0, 5000) } })
+      .project({ _id: 0, k: 1, entry: 1 })
+      .toArray();
+    overrides = Object.fromEntries(ovs.map((r: any) => [r.k, r.entry]));
   }
 
   return json(res, 200, { ok: true, tournaments, overrides });
