@@ -25,3 +25,5 @@ dist-ssr
 
 # TypeScript incremental
 *.tsbuildinfo
+
+server/.env
