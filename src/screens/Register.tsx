@@ -37,10 +37,7 @@ export function Register() {
 
   return (
     <div className={styles.narrow}>
-      <h1 className={styles.pageTitle}>Registro (cliente)</h1>
-      <p className={styles.muted}>
-        Las cuentas nuevas son solo clientes. El rol admin lo define Plasma Store. Precios siempre en CLP.
-      </p>
+      <h1 className={styles.pageTitle}>Registro</h1>
       <form className={styles.form} onSubmit={onSubmit}>
         <label className={styles.label}>
           Nombre visible
