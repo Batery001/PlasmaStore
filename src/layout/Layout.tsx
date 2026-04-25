@@ -81,15 +81,9 @@ export function Layout() {
                   </button>
                 </>
               ) : (
-                <>
-                  <Link to="/login">Mi cuenta</Link>
-                  <Link to="/carrito" className={styles.navCart}>
-                    Carrito <CartNavIcon className={styles.navCartIcon} />
-                  </Link>
-                  <Link to="/registro" className={styles.navReg}>
-                    Registro
-                  </Link>
-                </>
+                <Link to="/carrito" className={styles.navCart}>
+                  Carrito <CartNavIcon className={styles.navCartIcon} />
+                </Link>
               )}
               {user?.role === "admin" && <Link to="/admin">Administración</Link>}
             </>
@@ -130,12 +124,7 @@ export function Layout() {
                     Salir
                   </button>
                 </>
-              ) : (
-                <>
-                  <Link to="/login">Mi cuenta</Link>
-                  <Link to="/registro">Registro</Link>
-                </>
-              )}
+              ) : null}
             </>
           )}
         </nav>

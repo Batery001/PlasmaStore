@@ -104,16 +104,6 @@ export function Home() {
             <Link className={styles.btnPrimary} to="/carrito">
               Ver carrito {cartCount > 0 ? <span className={styles.cartCount}>({cartCount})</span> : null}
             </Link>
-            {!user ? (
-              <>
-                <Link className={styles.btnGhost} to="/login">
-                  Entrar
-                </Link>
-                <Link className={styles.btnGhost} to="/registro">
-                  Registro
-                </Link>
-              </>
-            ) : null}
           </div>
         </div>
         <div>
