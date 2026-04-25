@@ -7,22 +7,36 @@ import styles from "./pages.module.css";
 export function Register() {
   const { refresh } = useAuth();
   const nav = useNavigate();
-  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+    if (password.trim() !== password2.trim()) {
+      setError("Las contraseñas no coinciden.");
+      return;
+    }
     setBusy(true);
     try {
       const res = await fetch("/api/store/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({
+          username,
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          password,
+          password_confirm: password2,
+        }),
       });
       const data = await parseResponseJson<{ error?: string }>(res);
       if (!res.ok) throw new Error(data.error || "No se pudo registrar");
@@ -40,8 +54,22 @@ export function Register() {
       <h1 className={styles.pageTitle}>Registro</h1>
       <form className={styles.form} onSubmit={onSubmit}>
         <label className={styles.label}>
-          Nombre visible
-          <input className={styles.input} value={name} onChange={(e) => setName(e.target.value)} required />
+          Nombre de usuario
+          <input
+            className={styles.input}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+            required
+          />
+        </label>
+        <label className={styles.label}>
+          Nombre
+          <input className={styles.input} value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+        </label>
+        <label className={styles.label}>
+          Apellido
+          <input className={styles.input} value={lastName} onChange={(e) => setLastName(e.target.value)} required />
         </label>
         <label className={styles.label}>
           Email
@@ -62,6 +90,18 @@ export function Register() {
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            minLength={6}
+            required
+          />
+        </label>
+        <label className={styles.label}>
+          Confirmar contraseña
+          <input
+            className={styles.input}
+            type="password"
+            autoComplete="new-password"
+            value={password2}
+            onChange={(e) => setPassword2(e.target.value)}
             minLength={6}
             required
           />

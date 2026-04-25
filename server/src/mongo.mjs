@@ -109,6 +109,7 @@ export async function getDb() {
 
 export async function ensureIndexes(db) {
   await db.collection("store_users").createIndex({ email: 1 }, { unique: true });
+  await db.collection("store_users").createIndex({ username: 1 }, { unique: true, sparse: true });
   await db.collection("cart_items").createIndex({ user_id: 1, product_id: 1 }, { unique: true });
   await db.collection("tournament_deck_overrides").createIndex({ k: 1 }, { unique: true });
   await db.collection("store_widgets").createIndex({ widget_id: 1 }, { unique: true });

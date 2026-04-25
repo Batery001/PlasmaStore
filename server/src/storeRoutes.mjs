@@ -415,19 +415,41 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
   app.post("/api/store/register", async (req, res) => {
     try {
       const db = await getDb();
+      const usernameRaw = String(req.body?.username || "").trim();
+      const username = usernameRaw.toLowerCase();
+      const first_name = String(req.body?.first_name || req.body?.firstName || "").trim();
+      const last_name = String(req.body?.last_name || req.body?.lastName || "").trim();
       const email = String(req.body?.email || "")
         .trim()
         .toLowerCase();
       const password = String(req.body?.password || "").trim();
-      const name = String(req.body?.name || "").trim() || email.split("@")[0] || "usuario";
+      const password_confirm = String(req.body?.password_confirm || req.body?.passwordConfirm || "").trim();
+      const name = `${first_name} ${last_name}`.trim() || email.split("@")[0] || "usuario";
       if (!email || !email.includes("@")) return res.status(400).json({ ok: false, error: "Email inválido." });
       if (password.length < 6) return res.status(400).json({ ok: false, error: "La contraseña debe tener al menos 6 caracteres." });
+      if (password_confirm && password !== password_confirm) {
+        return res.status(400).json({ ok: false, error: "Las contraseñas no coinciden." });
+      }
+      if (!username || username.length < 3) {
+        return res.status(400).json({ ok: false, error: "Nombre de usuario inválido (mín. 3 caracteres)." });
+      }
+      if (!/^[a-z0-9_\\.\\-]+$/i.test(username)) {
+        return res.status(400).json({ ok: false, error: "El nombre de usuario solo puede usar letras, números, guión, punto y guión bajo." });
+      }
+      if (!first_name || !last_name) {
+        return res.status(400).json({ ok: false, error: "Ingresa nombre y apellido." });
+      }
       const exists = await db.collection("store_users").findOne({ email }, { projection: { _id: 1 } });
       if (exists) return res.status(409).json({ ok: false, error: "Ese email ya está registrado." });
+      const existsUser = await db.collection("store_users").findOne({ username }, { projection: { _id: 1 } });
+      if (existsUser) return res.status(409).json({ ok: false, error: "Ese nombre de usuario ya está en uso." });
       const id = await nextSeq(db, "user");
       const passHash = await bcrypt.hash(password, 10);
       await db.collection("store_users").insertOne({
         _id: id,
+        username,
+        first_name,
+        last_name,
         email,
         name,
         role: "customer",
