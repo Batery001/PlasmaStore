@@ -81,9 +81,12 @@ export function Layout() {
                   </button>
                 </>
               ) : (
-                <Link to="/carrito" className={styles.navCart}>
-                  Carrito <CartNavIcon className={styles.navCartIcon} />
-                </Link>
+                <>
+                  <Link to="/login">Entrar</Link>
+                  <Link to="/carrito" className={styles.navCart}>
+                    Carrito <CartNavIcon className={styles.navCartIcon} />
+                  </Link>
+                </>
               )}
               {user?.role === "admin" && <Link to="/admin">Administración</Link>}
             </>
@@ -124,7 +127,9 @@ export function Layout() {
                     Salir
                   </button>
                 </>
-              ) : null}
+              ) : (
+                <Link to="/login">Entrar</Link>
+              )}
             </>
           )}
         </nav>
