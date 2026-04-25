@@ -127,75 +127,16 @@
   flex-wrap: wrap;
 }
 
-.bellWrap {
-  position: relative;
-}
-
-.bellBtn {
-  position: relative;
-  width: 2.35rem;
-  height: 2.35rem;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  background: #f5f5f5;
-  cursor: pointer;
-  font-size: 1.15rem;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.bellBtn:hover {
-  background: #eaeaea;
-  border-color: #999;
-}
-
-.bellBadge {
+.srOnly {
   position: absolute;
-  top: 3px;
-  right: 3px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #d9534f;
-  border: 2px solid #fff;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
-}
-
-.bellPanel {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 8px);
-  width: min(360px, calc(100vw - 2rem));
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.18);
-  padding: 1rem 1.1rem;
-  z-index: 200;
-}
-
-.bellPanelTitle {
-  font-weight: 700;
-  font-size: 0.95rem;
-  margin: 0 0 0.5rem;
-  color: #222;
-}
-
-.bellPanelRow {
-  font-size: 0.86rem;
-  margin: 0.35rem 0;
-  color: #444;
-}
-
-.bellPanelActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.85rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #eee;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .content {

@@ -1,6 +1,5 @@
 import { NavLink, Outlet, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { AdminTournamentBell } from "./AdminTournamentBell";
 import styles from "./admin.module.css";
 
 export function AdminLayout() {
@@ -90,7 +89,6 @@ export function AdminLayout() {
             <span>
               Administración · {user.name} ({user.email})
             </span>
-            <AdminTournamentBell />
           </div>
         </header>
         <main className={styles.content}>

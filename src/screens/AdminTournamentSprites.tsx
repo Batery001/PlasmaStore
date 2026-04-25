@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { parseResponseJson } from "../lib/parseResponseJson";
 import { deckRowKey } from "../lib/tournamentDeckKey";
 import { DeckSpriteImg } from "../lib/DeckSpriteImg";
@@ -40,6 +40,16 @@ type RecentRes = {
   tournaments?: TournamentSnap[];
 };
 
+type UploadTdfRes = {
+  ok?: boolean;
+  error?: string;
+  pending?: {
+    fileName: string;
+    mtimeMs: number;
+    parseError: string | null;
+  };
+};
+
 type EditTarget = {
   fileName: string;
   categoryCode: string;
@@ -55,10 +65,13 @@ export function AdminTournamentSprites() {
   const [catIdx, setCatIdx] = useState(0);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
   const [rowBusy, setRowBusy] = useState<string | null>(null);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState<string | null>(null);
+  const tdfInputRef = useRef<HTMLInputElement>(null);
 
-  async function loadAll() {
+  async function loadAll(opts?: { silent?: boolean }) {
     setErr(null);
-    setLoading(true);
+    if (!opts?.silent) setLoading(true);
     try {
       const [rT, rO] = await Promise.all([
         fetch("/api/public/tournaments/recent?limit=15"),
@@ -85,7 +98,37 @@ export function AdminTournamentSprites() {
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Error");
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
+    }
+  }
+
+  async function uploadTdf(file: File) {
+    setUploadMsg(null);
+    setUploadBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("tdf", file);
+      const res = await fetch("/api/admin/upload-tdf", {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      const data = await parseResponseJson<UploadTdfRes>(res);
+      if (!res.ok) throw new Error(data.error || `Error HTTP ${res.status}`);
+      if (data.error) throw new Error(data.error);
+      const fn = data.pending?.fileName || file.name;
+      if (data.pending?.parseError) {
+        setUploadMsg(`Archivo guardado (${fn}) con error de parseo: ${data.pending.parseError}`);
+      } else {
+        setUploadMsg(`Torneo subido: ${fn}`);
+      }
+      if (data.pending?.fileName) setFilePick(data.pending.fileName);
+      await loadAll({ silent: true });
+    } catch (e) {
+      setUploadMsg(e instanceof Error ? e.message : "Error al subir el .tdf");
+    } finally {
+      setUploadBusy(false);
+      if (tdfInputRef.current) tdfInputRef.current.value = "";
     }
   }
 
@@ -160,10 +203,42 @@ export function AdminTournamentSprites() {
                 ))}
               </select>
             </label>
-            <button type="button" className={adminStyles.btn} onClick={() => void loadAll()}>
+            <input
+              ref={tdfInputRef}
+              type="file"
+              accept=".tdf,text/plain,application/xml"
+              className={adminStyles.srOnly}
+              aria-label="Elegir archivo .tdf del torneo"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void uploadTdf(f);
+              }}
+            />
+            <button
+              type="button"
+              className={adminStyles.btnPrimary}
+              disabled={uploadBusy}
+              aria-label="Subir archivo .tdf al servidor"
+              onClick={() => tdfInputRef.current?.click()}
+            >
+              {uploadBusy ? "Subiendo…" : "Subir .tdf"}
+            </button>
+            <button type="button" className={adminStyles.btn} onClick={() => void loadAll()} disabled={uploadBusy}>
               Recargar
             </button>
           </div>
+          {uploadMsg ? (
+            <p
+              className={
+                uploadMsg.startsWith("Error") || uploadMsg.includes("error de parseo") || uploadMsg.includes("HTTP")
+                  ? adminStyles.error
+                  : adminStyles.muted
+              }
+              style={{ marginTop: "-0.5rem", marginBottom: "1rem" }}
+            >
+              {uploadMsg}
+            </p>
+          ) : null}
 
           {!selected ? (
             <p className={adminStyles.muted}>No hay torneos en el servidor.</p>
