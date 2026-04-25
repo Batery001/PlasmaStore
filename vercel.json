@@ -1,7 +1,1 @@
-{
-  "functions": {
-    "src/pages/api/[[...slug]].ts": {
-      "maxDuration": 30
-    }
-  }
-}
+{}
