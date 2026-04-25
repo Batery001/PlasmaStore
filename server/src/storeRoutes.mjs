@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import bcrypt from "bcryptjs";
 import multer from "multer";
 import { ObjectId } from "mongodb";
+import { Environment, IntegrationApiKeys, IntegrationCommerceCodes, Options, WebpayPlus } from "transbank-sdk";
 import { nextSeq } from "./counters.mjs";
 import { clearSessionCookie, makeSessionCookie, readSession } from "./session.mjs";
 
@@ -100,6 +101,17 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
     next();
   }
 
+  function optionalProductImagesUpload(req, res, next) {
+    const ct = String(req.headers["content-type"] || "");
+    if (ct.includes("multipart/form-data")) {
+      return uploadProductImage.array("images", 10)(req, res, (err) => {
+        if (err) return res.status(400).json({ ok: false, error: err.message || "Archivos inválidos." });
+        next();
+      });
+    }
+    next();
+  }
+
   const CAROUSEL_WIDGET_ID = "carousel_home";
   const CAROUSEL_MAX = 6;
 
@@ -127,6 +139,125 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
     res.status(code).json({ ok: false, error: msg });
   }
 
+  function slugify(raw) {
+    return String(raw || "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 64);
+  }
+
+  // =========================
+  // Limitless card search (para Admin → Singles)
+  // =========================
+  const limitlessCache = new Map(); // key -> { at: number, items: any[] }
+  const LIMITLESS_CACHE_MS = 45_000;
+
+  function parseLimitlessCardResults(html, maxItems) {
+    const out = [];
+    if (!html || typeof html !== "string") return out;
+
+    // En algunas vistas, Limitless renderiza links absolutos.
+    // Usamos display=text porque incluye resultados en el HTML sin JS.
+    const reA =
+      /<a\b[^>]*href="(?:https?:\/\/limitlesstcg\.com)?\/cards\/([^\/"]+)\/([^\/"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+    let m;
+    while ((m = reA.exec(html)) && out.length < maxItems) {
+      const set = String(m[1] || "").trim().toUpperCase();
+      const number = String(m[2] || "").trim();
+      const block = String(m[3] || "");
+
+      // nombre: en display=text el texto del <a> suele ser el nombre
+      let name = block.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+
+      // normalizar HTML entities básicas
+      name = name
+        .replace(/&amp;/g, "&")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">");
+
+      if (!set || !number) continue;
+      const key = `${set}/${number}`;
+      if (out.some((x) => x.key === key)) continue;
+      out.push({
+        key,
+        set,
+        number,
+        name: name || `${set} ${number}`,
+        page_url: `https://limitlesstcg.com/cards/${encodeURIComponent(set)}/${encodeURIComponent(number)}`,
+        image_url: null,
+      });
+    }
+    return out;
+  }
+
+  app.get("/api/store/admin/limitless/cards", async (req, res) => {
+    try {
+      await requireAdmin(req);
+      const q = String(req.query?.q || "").trim();
+      const lang = String(req.query?.lang || "en").trim().toLowerCase();
+      const limitRaw = parseInt(String(req.query?.limit || "12"), 10);
+      const limit = Number.isFinite(limitRaw) ? Math.min(25, Math.max(1, limitRaw)) : 12;
+
+      if (!q) return res.json({ ok: true, q, items: [] });
+      if (q.length < 2) return res.json({ ok: true, q, items: [] });
+
+      const cacheKey = `${lang}|${q.toLowerCase()}|${limit}`;
+      const now = Date.now();
+      const cached = limitlessCache.get(cacheKey);
+      if (cached && now - cached.at < LIMITLESS_CACHE_MS) {
+        return res.json({ ok: true, q, items: cached.items });
+      }
+
+      const url = `https://limitlesstcg.com/cards?q=${encodeURIComponent(q)}&lang=${encodeURIComponent(lang)}&display=text&show=${limit}`;
+      const r = await fetch(url, {
+        headers: {
+          "user-agent": "PlasmaStore/1.0 (+admin singles search)",
+          accept: "text/html,application/xhtml+xml",
+        },
+      });
+      if (!r.ok) return res.status(502).json({ ok: false, error: "No se pudo consultar Limitless." });
+      const html = await r.text();
+      const items = parseLimitlessCardResults(html, limit);
+      limitlessCache.set(cacheKey, { at: now, items });
+      res.json({ ok: true, q, items });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  function makeWebpayTx() {
+    const envRaw = String(process.env.WEBPAY_ENV || "integration").trim().toLowerCase();
+    const isIntegration = envRaw === "integration" || envRaw === "test" || envRaw === "int";
+
+    const commerceCode = isIntegration
+      ? IntegrationCommerceCodes.WEBPAY_PLUS
+      : String(process.env.WEBPAY_COMMERCE_CODE || "").trim();
+    const apiKey = isIntegration ? IntegrationApiKeys.WEBPAY : String(process.env.WEBPAY_API_KEY || "").trim();
+    const env = isIntegration ? Environment.Integration : Environment.Production;
+
+    if (!isIntegration) {
+      if (!commerceCode) throw Object.assign(new Error("Falta WEBPAY_COMMERCE_CODE."), { status: 400 });
+      if (!apiKey) throw Object.assign(new Error("Falta WEBPAY_API_KEY."), { status: 400 });
+    }
+
+    return new WebpayPlus.Transaction(new Options(commerceCode, apiKey, env));
+  }
+
+  function resolvePublicBaseUrl(req) {
+    const forced = String(process.env.PUBLIC_BASE_URL || "").trim();
+    if (forced) return forced.replace(/\/+$/, "");
+    const proto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim() || "http";
+    const host = String(req.headers["x-forwarded-host"] || req.headers.host || "").split(",")[0].trim();
+    if (!host) return "http://localhost:3000";
+    return `${proto}://${host}`.replace(/\/+$/, "");
+  }
+
   app.post("/api/store/bootstrap-admin", async (req, res) => {
     try {
       const token = String(req.headers["x-bootstrap-token"] || "").trim();
@@ -150,6 +281,112 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
         createdAt: new Date(),
       });
       res.json({ ok: true, user: { id, email, name: "admin", role: "admin" } });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  // =========================
+  // Etiquetas / categorías (OpenCart-like)
+  // =========================
+  app.get("/api/store/tags", async (_req, res) => {
+    try {
+      const db = await getDb();
+      const tags = await db
+        .collection("store_tags")
+        .find({ active: { $ne: 0 } })
+        .project({ name: 1, slug: 1, order: 1 })
+        .sort({ order: 1, name: 1 })
+        .toArray();
+      res.json({
+        ok: true,
+        tags: tags.map((t) => ({ id: t._id, name: t.name, slug: t.slug, order: t.order ?? 999 })),
+      });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  app.get("/api/store/admin/tags", async (req, res) => {
+    try {
+      await requireAdmin(req);
+      const db = await getDb();
+      const tags = await db
+        .collection("store_tags")
+        .find({})
+        .project({ name: 1, slug: 1, order: 1, active: 1, createdAt: 1, updatedAt: 1 })
+        .sort({ order: 1, name: 1 })
+        .toArray();
+      res.json({ ok: true, tags });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  app.post("/api/store/admin/tags", async (req, res) => {
+    try {
+      await requireAdmin(req);
+      const db = await getDb();
+      const name = String(req.body?.name || "").trim();
+      const order = parseInt(String(req.body?.order ?? "999"), 10);
+      const active = req.body?.active === false || req.body?.active === 0 ? 0 : 1;
+      const slugRaw = String(req.body?.slug || "");
+      const slug = slugify(slugRaw || name);
+      if (!name) return res.status(400).json({ ok: false, error: "Nombre requerido." });
+      if (!slug) return res.status(400).json({ ok: false, error: "Slug inválido." });
+      const id = await nextSeq(db, "tag");
+      const now = new Date();
+      await db.collection("store_tags").insertOne({
+        _id: id,
+        name,
+        slug,
+        order: Number.isFinite(order) ? order : 999,
+        active,
+        createdAt: now,
+        updatedAt: now,
+      });
+      res.json({ ok: true, tag: { id, name, slug, order: Number.isFinite(order) ? order : 999, active } });
+    } catch (e) {
+      // slug unique
+      if (String(e?.message || "").includes("E11000")) return res.status(409).json({ ok: false, error: "Slug ya existe." });
+      handleErr(res, e);
+    }
+  });
+
+  app.put("/api/store/admin/tags/:id", async (req, res) => {
+    try {
+      await requireAdmin(req);
+      const db = await getDb();
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isFinite(id) || id <= 0) return res.status(400).json({ ok: false, error: "ID inválido." });
+      const patch = {};
+      if (req.body?.name != null) patch.name = String(req.body.name).trim();
+      if (req.body?.slug != null) patch.slug = slugify(req.body.slug);
+      if (req.body?.order != null) {
+        const o = parseInt(String(req.body.order), 10);
+        if (Number.isFinite(o)) patch.order = o;
+      }
+      if (req.body?.active != null) patch.active = req.body.active === false || req.body.active === 0 ? 0 : 1;
+      patch.updatedAt = new Date();
+      if (patch.name === "") return res.status(400).json({ ok: false, error: "Nombre inválido." });
+      if (patch.slug === "") return res.status(400).json({ ok: false, error: "Slug inválido." });
+      const r = await db.collection("store_tags").findOneAndUpdate({ _id: id }, { $set: patch }, { returnDocument: "after" });
+      if (!r?.value) return res.status(404).json({ ok: false, error: "Etiqueta no encontrada." });
+      res.json({ ok: true, tag: r.value });
+    } catch (e) {
+      if (String(e?.message || "").includes("E11000")) return res.status(409).json({ ok: false, error: "Slug ya existe." });
+      handleErr(res, e);
+    }
+  });
+
+  app.delete("/api/store/admin/tags/:id", async (req, res) => {
+    try {
+      await requireAdmin(req);
+      const db = await getDb();
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isFinite(id) || id <= 0) return res.status(400).json({ ok: false, error: "ID inválido." });
+      await db.collection("store_tags").updateOne({ _id: id }, { $set: { active: 0, updatedAt: new Date() } });
+      res.json({ ok: true });
     } catch (e) {
       handleErr(res, e);
     }
@@ -228,14 +465,33 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
     }
   });
 
-  app.get("/api/store/products", async (_req, res) => {
+  app.get("/api/store/products", async (req, res) => {
     try {
       const db = await getDb();
+      const tag = req.query?.tag != null ? String(req.query.tag).trim().toLowerCase() : "";
+      const limitRaw = req.query?.limit != null ? parseInt(String(req.query.limit), 10) : NaN;
+      const limit = Number.isFinite(limitRaw) ? Math.min(200, Math.max(1, limitRaw)) : null;
+
+      const filter = { active: { $ne: 0 } };
+      if (tag) {
+        // productos guardan tags como array de slugs
+        filter.tags = tag;
+      }
       const products = await db
         .collection("products")
-        .find({ active: { $ne: 0 } })
-        .project({ name: 1, description: 1, price_cents: 1, stock: 1, image_url: 1 })
+        .find(filter)
+        .project({
+          name: 1,
+          description: 1,
+          price_cents: 1,
+          compare_price_cents: 1,
+          stock: 1,
+          image_url: 1,
+          image_urls: 1,
+          tags: 1,
+        })
         .sort({ _id: 1 })
+        .limit(limit ?? 200)
         .toArray();
       res.json({
         ok: true,
@@ -244,10 +500,327 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
           name: p.name,
           description: p.description || "",
           price_cents: p.price_cents || 0,
+          compare_price_cents: typeof p.compare_price_cents === "number" ? p.compare_price_cents : null,
           stock: p.stock || 0,
           image_url: p.image_url ?? null,
+          image_urls: Array.isArray(p.image_urls) ? p.image_urls : p.image_url ? [p.image_url] : [],
+          tags: Array.isArray(p.tags) ? p.tags : [],
         })),
       });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  app.get("/api/store/products/:id", async (req, res) => {
+    try {
+      const db = await getDb();
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isFinite(id) || id < 1) return res.status(400).json({ ok: false, error: "id inválido." });
+      const row = await db.collection("products").findOne(
+        { _id: id, active: { $ne: 0 } },
+        {
+          projection: {
+            name: 1,
+            description: 1,
+            price_cents: 1,
+            compare_price_cents: 1,
+            stock: 1,
+            image_url: 1,
+            image_urls: 1,
+            tags: 1,
+          },
+        }
+      );
+      if (!row) return res.status(404).json({ ok: false, error: "Producto no encontrado." });
+      const image_urls = Array.isArray(row.image_urls) ? row.image_urls : row.image_url ? [row.image_url] : [];
+      res.json({
+        ok: true,
+        product: {
+          id: row._id,
+          name: row.name,
+          description: row.description || "",
+          price_cents: row.price_cents || 0,
+          compare_price_cents: typeof row.compare_price_cents === "number" ? row.compare_price_cents : null,
+          stock: row.stock || 0,
+          image_url: row.image_url ?? null,
+          image_urls,
+          tags: Array.isArray(row.tags) ? row.tags : [],
+        },
+      });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  app.get("/api/store/bestsellers", async (req, res) => {
+    try {
+      const db = await getDb();
+      const limit = Math.min(12, Math.max(1, parseInt(String(req.query?.limit ?? "4"), 10) || 4));
+      const sinceDays = Math.min(365, Math.max(1, parseInt(String(req.query?.days ?? "30"), 10) || 30));
+      const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000);
+
+      const rows = await db
+        .collection("store_orders")
+        .aggregate([
+          { $match: { createdAt: { $gte: since }, status: { $in: ["paid", "processing", "shipped", "completed"] } } },
+          { $unwind: "$items" },
+          {
+            $group: {
+              _id: "$items.product_id",
+              units: { $sum: "$items.quantity" },
+            },
+          },
+          { $sort: { units: -1 } },
+          { $limit: limit },
+          {
+            $lookup: {
+              from: "products",
+              localField: "_id",
+              foreignField: "_id",
+              as: "p",
+            },
+          },
+          { $unwind: "$p" },
+          { $match: { "p.active": { $ne: 0 } } },
+          {
+            $project: {
+              _id: 0,
+              id: "$p._id",
+              name: "$p.name",
+              description: "$p.description",
+              price_cents: "$p.price_cents",
+              stock: "$p.stock",
+              image_url: "$p.image_url",
+              units: 1,
+            },
+          },
+        ])
+        .toArray();
+
+      res.json({ ok: true, products: rows });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  // =========================
+  // Checkout + Webpay
+  // =========================
+  app.post("/api/store/checkout/webpay/create", async (req, res) => {
+    try {
+      const u = await requireUser(req);
+      const db = await getDb();
+
+      const cart = await db
+        .collection("cart_items")
+        .aggregate([
+          { $match: { user_id: u.id } },
+          {
+            $lookup: {
+              from: "products",
+              localField: "product_id",
+              foreignField: "_id",
+              as: "p",
+            },
+          },
+          { $unwind: "$p" },
+          { $match: { "p.active": { $ne: 0 } } },
+          {
+            $project: {
+              product_id: 1,
+              quantity: 1,
+              name: "$p.name",
+              price_cents: "$p.price_cents",
+              stock: "$p.stock",
+            },
+          },
+        ])
+        .toArray();
+
+      if (!cart.length) return res.status(400).json({ ok: false, error: "Carrito vacío." });
+
+      // Validación básica de stock
+      for (const it of cart) {
+        const qty = parseInt(String(it.quantity ?? 0), 10);
+        const stock = parseInt(String(it.stock ?? 0), 10);
+        if (!Number.isFinite(qty) || qty < 1) return res.status(400).json({ ok: false, error: "Cantidad inválida en carrito." });
+        if (!Number.isFinite(stock) || stock < qty) return res.status(409).json({ ok: false, error: `Sin stock para ${it.name}.` });
+      }
+
+      const total = cart.reduce((s, it) => s + (parseInt(String(it.price_cents ?? 0), 10) || 0) * (parseInt(String(it.quantity ?? 0), 10) || 0), 0);
+      if (!Number.isFinite(total) || total < 50) return res.status(400).json({ ok: false, error: "Total inválido." });
+
+      const orderId = await nextSeq(db, "order");
+      const buyOrder = `O${orderId}`.slice(0, 26);
+      const sessionId = `u${u.id}`.slice(0, 61);
+
+      const base = resolvePublicBaseUrl(req);
+      const returnUrl = `${base}/webpay/return`;
+
+      const tx = makeWebpayTx();
+      const createResp = await tx.create(buyOrder, sessionId, total, returnUrl);
+
+      const now = new Date();
+      await db.collection("store_orders").insertOne({
+        _id: orderId,
+        user_id: u.id,
+        status: "pending_payment",
+        currency: "CLP",
+        total_cents: total,
+        items: cart.map((it) => ({
+          product_id: it.product_id,
+          name: it.name,
+          price_cents: it.price_cents,
+          quantity: it.quantity,
+        })),
+        payment: {
+          provider: "webpay",
+          buyOrder,
+          token: createResp?.token || null,
+          url: createResp?.url || null,
+        },
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      res.json({
+        ok: true,
+        orderId,
+        token: createResp?.token,
+        url: createResp?.url,
+      });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  app.post("/api/store/checkout/webpay/commit", async (req, res) => {
+    try {
+      const u = await requireUser(req);
+      const db = await getDb();
+      const token = String(req.body?.token_ws || req.body?.token || "").trim();
+      if (!token) return res.status(400).json({ ok: false, error: "Falta token_ws." });
+
+      const order = await db.collection("store_orders").findOne({ "payment.provider": "webpay", "payment.token": token, user_id: u.id });
+      if (!order) return res.status(404).json({ ok: false, error: "Orden no encontrada para este token." });
+
+      const tx = makeWebpayTx();
+      const commitResp = await tx.commit(token);
+
+      const approved = String(commitResp?.status || "").toUpperCase() === "AUTHORIZED";
+      const status = approved ? "paid" : "payment_failed";
+      await db.collection("store_orders").updateOne(
+        { _id: order._id },
+        {
+          $set: {
+            status,
+            "payment.commit": commitResp ?? null,
+            updatedAt: new Date(),
+          },
+        }
+      );
+
+      // Si pagó, vaciamos carrito
+      if (approved) {
+        await db.collection("cart_items").deleteMany({ user_id: u.id });
+      }
+
+      res.json({ ok: true, approved, status, orderId: order._id, commit: commitResp ?? null });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  // =========================
+  // Órdenes (cliente y admin)
+  // =========================
+  app.get("/api/store/orders", async (req, res) => {
+    try {
+      const u = await requireUser(req);
+      const db = await getDb();
+      const orders = await db
+        .collection("store_orders")
+        .find({ user_id: u.id })
+        .project({ user_id: 0 })
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .toArray();
+      res.json({ ok: true, orders });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  app.get("/api/store/admin/orders", async (req, res) => {
+    try {
+      await requireAdmin(req);
+      const db = await getDb();
+      const orders = await db
+        .collection("store_orders")
+        .find({})
+        .sort({ createdAt: -1 })
+        .limit(200)
+        .toArray();
+      res.json({ ok: true, orders });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  app.get("/api/store/admin/orders/:id", async (req, res) => {
+    try {
+      await requireAdmin(req);
+      const db = await getDb();
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isFinite(id) || id < 1) return res.status(400).json({ ok: false, error: "id inválido." });
+      const order = await db.collection("store_orders").findOne({ _id: id });
+      if (!order) return res.status(404).json({ ok: false, error: "Orden no encontrada." });
+      const u = await db
+        .collection("store_users")
+        .findOne({ _id: order.user_id }, { projection: { email: 1, name: 1, role: 1 } });
+      res.json({ ok: true, order, user: u ? { id: u._id, email: u.email, name: u.name, role: u.role } : null });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  app.post("/api/store/admin/orders/:id/status", async (req, res) => {
+    try {
+      const admin = await requireAdmin(req);
+      const db = await getDb();
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isFinite(id) || id < 1) return res.status(400).json({ ok: false, error: "id inválido." });
+      const next = String(req.body?.status || "").trim();
+      const allowed = new Set([
+        "pending_payment",
+        "paid",
+        "processing",
+        "shipped",
+        "completed",
+        "cancelled",
+        "refunded",
+        "payment_failed",
+      ]);
+      if (!allowed.has(next)) return res.status(400).json({ ok: false, error: "Estado inválido." });
+
+      const now = new Date();
+      await db.collection("store_orders").updateOne(
+        { _id: id },
+        {
+          $set: { status: next, updatedAt: now },
+          $push: {
+            history: {
+              at: now,
+              by: { id: admin.id, email: admin.email, name: admin.name },
+              status: next,
+              note: String(req.body?.note || "").trim().slice(0, 500),
+            },
+          },
+        }
+      );
+      const order = await db.collection("store_orders").findOne({ _id: id });
+      res.json({ ok: true, order });
     } catch (e) {
       handleErr(res, e);
     }
@@ -286,7 +859,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
           const data = await db
             .collection("products")
             .find({ _id: { $in: cfg.productIds }, active: { $ne: 0 } })
-            .project({ name: 1, description: 1, price_cents: 1, stock: 1, image_url: 1 })
+            .project({ name: 1, description: 1, price_cents: 1, compare_price_cents: 1, stock: 1, image_url: 1 })
             .toArray();
           const byId = new Map(data.map((p) => [p._id, p]));
           products = cfg.productIds.map((id) => byId.get(id)).filter(Boolean);
@@ -294,7 +867,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
           products = await db
             .collection("products")
             .find({ active: { $ne: 0 } })
-            .project({ name: 1, description: 1, price_cents: 1, stock: 1, image_url: 1 })
+            .project({ name: 1, description: 1, price_cents: 1, compare_price_cents: 1, stock: 1, image_url: 1 })
             .sort({ _id: 1 })
             .limit(6)
             .toArray();
@@ -312,6 +885,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
           name: p.name,
           description: p.description || "",
           price_cents: p.price_cents || 0,
+          compare_price_cents: typeof p.compare_price_cents === "number" ? p.compare_price_cents : null,
           stock: p.stock || 0,
           image_url: p.image_url ?? null,
         })),
@@ -603,7 +1177,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
       const rows = await db
         .collection("products")
         .find({})
-        .project({ name: 1, description: 1, price_cents: 1, image_url: 1, stock: 1, active: 1 })
+        .project({ name: 1, description: 1, price_cents: 1, compare_price_cents: 1, image_url: 1, stock: 1, active: 1, tags: 1 })
         .sort({ _id: 1 })
         .toArray();
       res.json({
@@ -613,9 +1187,11 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
           name: p.name,
           description: p.description || "",
           price_cents: p.price_cents || 0,
+          compare_price_cents: typeof p.compare_price_cents === "number" ? p.compare_price_cents : null,
           image_url: p.image_url ?? null,
           stock: p.stock || 0,
           active: p.active ? 1 : 0,
+          tags: Array.isArray(p.tags) ? p.tags : [],
         })),
       });
     } catch (e) {
@@ -623,31 +1199,66 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
     }
   });
 
-  app.post("/api/store/admin/products", optionalProductImageUpload, async (req, res) => {
+  app.post("/api/store/admin/products", optionalProductImagesUpload, async (req, res) => {
     try {
       await requireAdmin(req);
       const db = await getDb();
       const name = String(req.body?.name || "").trim();
       const description = String(req.body?.description || "").trim();
       const price_cents = parseInt(String(req.body?.price_cents), 10);
+      const compare_price_cents =
+        req.body?.compare_price_cents == null || String(req.body.compare_price_cents).trim() === ""
+          ? null
+          : parseInt(String(req.body.compare_price_cents), 10);
       const stock = parseInt(String(req.body?.stock ?? "0"), 10);
       if (!name) return res.status(400).json({ ok: false, error: "Nombre obligatorio." });
       if (!Number.isFinite(price_cents) || price_cents < 0) return res.status(400).json({ ok: false, error: "Precio inválido (price_cents)." });
-      let image_url = null;
-      if (req.file) {
-        image_url = multerImageUrl(req);
-      } else if (req.body?.image_url != null && String(req.body.image_url).trim() !== "") {
-        image_url = String(req.body.image_url).trim();
+      if (compare_price_cents != null && (!Number.isFinite(compare_price_cents) || compare_price_cents < 0))
+        return res.status(400).json({ ok: false, error: "Precio anterior inválido (compare_price_cents)." });
+
+      let tags = [];
+      if (req.body?.tags_json != null && String(req.body.tags_json).trim() !== "") {
+        try {
+          const parsed = JSON.parse(String(req.body.tags_json));
+          if (Array.isArray(parsed)) {
+            tags = parsed.map((x) => String(x || "").trim()).filter(Boolean).slice(0, 20);
+          }
+        } catch {
+          return res.status(400).json({ ok: false, error: "tags_json inválido." });
+        }
       }
+
+      let image_urls = [];
+      const files = Array.isArray(req.files) ? req.files : [];
+      if (files.length > 0) {
+        // construir URLs manualmente según la storage usada
+        image_urls = files
+          .map((f) => {
+            if (f?.buffer && Buffer.isBuffer(f.buffer)) {
+              const mime = f.mimetype || "image/jpeg";
+              return `data:${mime};base64,${f.buffer.toString("base64")}`;
+            }
+            if (f?.filename) return `/store-media/products/${f.filename}`;
+            return null;
+          })
+          .filter(Boolean);
+      } else if (req.body?.image_url != null && String(req.body.image_url).trim() !== "") {
+        const one = String(req.body.image_url).trim();
+        image_urls = [one];
+      }
+      const image_url = image_urls[0] ?? null;
       const id = await nextSeq(db, "product");
       await db.collection("products").insertOne({
         _id: id,
         name,
         description,
         price_cents,
+        compare_price_cents: compare_price_cents != null ? compare_price_cents : undefined,
         stock: Number.isFinite(stock) && stock >= 0 ? stock : 0,
         active: 1,
         image_url,
+        image_urls,
+        tags,
       });
       const product = await db.collection("products").findOne({ _id: id });
       res.json({
@@ -657,9 +1268,12 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
           name: product.name,
           description: product.description || "",
           price_cents: product.price_cents,
+          compare_price_cents: typeof product.compare_price_cents === "number" ? product.compare_price_cents : null,
           image_url: product.image_url ?? null,
+          image_urls: Array.isArray(product.image_urls) ? product.image_urls : product.image_url ? [product.image_url] : [],
           stock: product.stock,
           active: product.active ? 1 : 0,
+          tags: Array.isArray(product.tags) ? product.tags : [],
         },
       });
     } catch (e) {
@@ -667,7 +1281,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
     }
   });
 
-  app.patch("/api/store/admin/products/:id", optionalProductImageUpload, async (req, res) => {
+  app.patch("/api/store/admin/products/:id", optionalProductImagesUpload, async (req, res) => {
     try {
       await requireAdmin(req);
       const db = await getDb();
@@ -688,6 +1302,16 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
         if (!Number.isFinite(price_cents) || price_cents < 0) return res.status(400).json({ ok: false, error: "Precio inválido." });
         $set.price_cents = price_cents;
       }
+      if (req.body?.compare_price_cents !== undefined) {
+        const raw = req.body.compare_price_cents;
+        if (raw === null || raw === "") {
+          $set.compare_price_cents = null;
+        } else {
+          const v = parseInt(String(raw), 10);
+          if (!Number.isFinite(v) || v < 0) return res.status(400).json({ ok: false, error: "Precio anterior inválido." });
+          $set.compare_price_cents = v;
+        }
+      }
       if (req.body?.stock !== undefined) {
         const stock = parseInt(String(req.body.stock), 10);
         if (!Number.isFinite(stock) || stock < 0) return res.status(400).json({ ok: false, error: "Stock inválido." });
@@ -698,19 +1322,52 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
         $set.active = active;
       }
 
-      if (req.file) {
-        if (prevRow.image_url) deleteStoredImageFile(uploadRoot, prevRow.image_url);
-        $set.image_url = multerImageUrl(req);
+      if (req.body?.tags_json !== undefined) {
+        if (req.body.tags_json === null || req.body.tags_json === "") {
+          $set.tags = [];
+        } else {
+          try {
+            const parsed = JSON.parse(String(req.body.tags_json));
+            if (!Array.isArray(parsed)) return res.status(400).json({ ok: false, error: "tags_json inválido." });
+            $set.tags = parsed.map((x) => String(x || "").trim()).filter(Boolean).slice(0, 20);
+          } catch {
+            return res.status(400).json({ ok: false, error: "tags_json inválido." });
+          }
+        }
+      }
+
+      const files = Array.isArray(req.files) ? req.files : [];
+      if (files.length > 0) {
+        const newUrls = files
+          .map((f) => {
+            if (f?.buffer && Buffer.isBuffer(f.buffer)) {
+              const mime = f.mimetype || "image/jpeg";
+              return `data:${mime};base64,${f.buffer.toString("base64")}`;
+            }
+            if (f?.filename) return `/store-media/products/${f.filename}`;
+            return null;
+          })
+          .filter(Boolean);
+        const prev = Array.isArray(prevRow.image_urls) ? prevRow.image_urls : prevRow.image_url ? [prevRow.image_url] : [];
+        const merged = [...prev, ...newUrls].filter(Boolean).slice(0, 10);
+        $set.image_urls = merged;
+        $set.image_url = merged[0] ?? null;
       } else if (req.body?.clear_image === true || req.body?.clear_image === "1") {
-        if (prevRow.image_url) deleteStoredImageFile(uploadRoot, prevRow.image_url);
+        // compat: limpiar todas las imágenes
+        const prev = Array.isArray(prevRow.image_urls) ? prevRow.image_urls : prevRow.image_url ? [prevRow.image_url] : [];
+        for (const u of prev) deleteStoredImageFile(uploadRoot, u);
         $set.image_url = null;
+        $set.image_urls = [];
       } else if (req.body?.image_url !== undefined && !req.file) {
         const raw = req.body.image_url;
         if (raw === null || raw === "") {
-          if (prevRow.image_url) deleteStoredImageFile(uploadRoot, prevRow.image_url);
+          const prev = Array.isArray(prevRow.image_urls) ? prevRow.image_urls : prevRow.image_url ? [prevRow.image_url] : [];
+          for (const u of prev) deleteStoredImageFile(uploadRoot, u);
           $set.image_url = null;
+          $set.image_urls = [];
         } else {
           $set.image_url = String(raw).trim();
+          $set.image_urls = [String(raw).trim()];
         }
       }
 
@@ -724,11 +1381,32 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
           name: product.name,
           description: product.description || "",
           price_cents: product.price_cents,
+          compare_price_cents: typeof product.compare_price_cents === "number" ? product.compare_price_cents : null,
           image_url: product.image_url ?? null,
+          image_urls: Array.isArray(product.image_urls) ? product.image_urls : product.image_url ? [product.image_url] : [],
           stock: product.stock,
           active: product.active ? 1 : 0,
+          tags: Array.isArray(product.tags) ? product.tags : [],
         },
       });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  app.delete("/api/store/admin/products/:id", async (req, res) => {
+    try {
+      await requireAdmin(req);
+      const db = await getDb();
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isFinite(id) || id < 1) return res.status(400).json({ ok: false, error: "id inválido." });
+      const prevRow = await db.collection("products").findOne({ _id: id });
+      if (!prevRow) return res.status(404).json({ ok: false, error: "Producto no encontrado." });
+
+      if (prevRow.image_url) deleteStoredImageFile(uploadRoot, prevRow.image_url);
+      await db.collection("products").deleteOne({ _id: id });
+      await db.collection("cart_items").deleteMany({ product_id: id });
+      res.json({ ok: true });
     } catch (e) {
       handleErr(res, e);
     }

@@ -127,6 +127,63 @@
   flex-wrap: wrap;
 }
 
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: #666;
+}
+
+.crumbLink {
+  color: #1e91cf;
+  text-decoration: none;
+}
+
+.crumbLink:hover {
+  text-decoration: underline;
+}
+
+.crumbSep {
+  opacity: 0.7;
+}
+
+.topbarRight {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.topbarUser {
+  color: #444;
+}
+
+.topbarBtn {
+  display: inline-block;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #e3e3e3;
+  border-radius: 3px;
+  background: #f8f8f8;
+  color: #333;
+  cursor: pointer;
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+
+.topbarBtn:hover {
+  background: #eee;
+}
+
+.navIcon {
+  display: inline-flex;
+  width: 18px;
+  justify-content: center;
+  margin-right: 0.45rem;
+  opacity: 0.9;
+}
+
 .srOnly {
   position: absolute;
   width: 1px;

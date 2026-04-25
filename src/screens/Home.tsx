@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { resolveStoreMediaUrl } from "../lib/media";
 import { parseResponseJson } from "../lib/parseResponseJson";
@@ -11,95 +11,65 @@ type Product = {
   name: string;
   description: string;
   price_cents: number;
+  compare_price_cents?: number;
   stock: number;
   image_url?: string | null;
+  tags?: string[];
 };
 
-const CAROUSEL_MAX = 6;
-
-/** Inicio = catálogo: carrusel de destacados + rejilla completa. */
+/** Inicio = catálogo: búsqueda + rejilla completa. */
 export function Home() {
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
-  const [featured, setFeatured] = useState<Product[]>([]);
-  const [carouselEnabled, setCarouselEnabled] = useState(true);
-  const [carouselAutoMs, setCarouselAutoMs] = useState(6000);
   const [msg, setMsg] = useState<string | null>(null);
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const viewportRef = useRef<HTMLDivElement>(null);
+  const [q, setQ] = useState("");
+  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     fetch("/api/store/products")
       .then(async (r) => parseResponseJson<{ products?: Product[] }>(r))
-      .then((d) => setProducts(d.products || []))
+      .then((d) => {
+        const list = d.products || [];
+        // Catálogo general (sellados/otros) excluye singles
+        setProducts(list.filter((p) => !(Array.isArray(p.tags) && p.tags.includes("singles"))));
+      })
       .catch(() => setProducts([]));
   }, []);
 
   useEffect(() => {
-    fetch("/api/store/carousel")
-      .then(async (r) => parseResponseJson<{ products?: Product[]; enabled?: boolean; autoMs?: number }>(r))
+    if (!user) {
+      setCartCount(0);
+      return;
+    }
+    let alive = true;
+    fetch("/api/store/cart", { credentials: "include" })
+      .then(async (r) => parseResponseJson<{ ok?: boolean; items?: Array<{ quantity?: number }> }>(r))
       .then((d) => {
-        setFeatured(d.products || []);
-        setCarouselEnabled(d.enabled !== false);
-        const am = typeof d.autoMs === "number" && Number.isFinite(d.autoMs) ? d.autoMs : 6000;
-        setCarouselAutoMs(am);
+        if (!alive) return;
+        const items = Array.isArray(d.items) ? d.items : [];
+        const n = items.reduce((acc, it) => acc + (parseInt(String(it.quantity ?? 0), 10) || 0), 0);
+        setCartCount(Math.max(0, n));
       })
       .catch(() => {
-        setFeatured([]);
-        setCarouselEnabled(true);
-        setCarouselAutoMs(6000);
+        if (!alive) return;
+        setCartCount(0);
       });
-  }, []);
-
-  /** Lista del carrusel: manual (widgets) o, si no hay, los primeros del catálogo como siempre. */
-  const displayFeatured = useMemo(() => {
-    if (featured.length > 0) return featured;
-    return products.slice(0, Math.min(CAROUSEL_MAX, products.length));
-  }, [featured, products]);
-
-  useEffect(() => {
-    setCarouselIndex(0);
-    const el = viewportRef.current;
-    if (el) el.scrollTo({ left: 0, behavior: "auto" });
-  }, [displayFeatured]);
-
-  const nFeatured = displayFeatured.length;
-
-  const scrollCarouselTo = useCallback(
-    (i: number) => {
-      const el = viewportRef.current;
-      if (!el || nFeatured < 1) return;
-      const clamped = ((i % nFeatured) + nFeatured) % nFeatured;
-      setCarouselIndex(clamped);
-      el.scrollTo({ left: clamped * el.clientWidth, behavior: "smooth" });
-    },
-    [nFeatured]
-  );
-
-  useEffect(() => {
-    if (nFeatured <= 1 || carouselAutoMs <= 0) return;
-    const t = window.setInterval(() => {
-      setCarouselIndex((prev) => {
-        const next = (prev + 1) % nFeatured;
-        const el = viewportRef.current;
-        if (el) el.scrollTo({ left: next * el.clientWidth, behavior: "smooth" });
-        return next;
-      });
-    }, carouselAutoMs);
-    return () => window.clearInterval(t);
-  }, [nFeatured, carouselAutoMs]);
-
-  useEffect(() => {
-    const el = viewportRef.current;
-    if (!el || nFeatured === 0) return;
-    const onScroll = () => {
-      const w = el.clientWidth || 1;
-      const i = Math.round(el.scrollLeft / w);
-      setCarouselIndex(Math.min(nFeatured - 1, Math.max(0, i)));
+    return () => {
+      alive = false;
     };
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [nFeatured, displayFeatured.length]);
+  }, [user]);
+
+  const filteredProducts = useMemo(() => {
+    const needle = String(q || "")
+      .trim()
+      .toLowerCase();
+    if (!needle) return products;
+    return products.filter((p) => {
+      const hay = `${p.name || ""} ${p.description || ""}`.toLowerCase();
+      return hay.includes(needle);
+    });
+  }, [products, q]);
+
 
   async function addToCart(p: Product) {
     setMsg(null);
@@ -118,133 +88,95 @@ export function Home() {
       setMsg(data.error || "No se pudo agregar");
       return;
     }
+    setCartCount((c) => c + 1);
     setMsg(`Agregado: ${p.name}`);
   }
 
   return (
     <div>
       <section className={styles.storeIntro}>
-        <div>
-          <p className={styles.kicker}>Tienda</p>
-          <h1 className={styles.storeIntroTitle}>Plasma Store</h1>
-          <p className={styles.storeIntroLead}>
-            Por ahora solo <strong>catálogo y carrito</strong>: elige productos, inicia sesión y revisa tu carrito.
-            Precios en <strong>CLP</strong>. ¿Nuevo? <Link to="/registro">Crear cuenta</Link>
-          </p>
+        <div className={styles.storeIntroTop}>
+          <div>
+            <p className={styles.kicker}>Tienda</p>
+            <h1 className={styles.storeIntroTitle}>Plasma Store</h1>
+          </div>
+          <div className={styles.storeIntroActions}>
+            <Link className={styles.btnPrimary} to="/carrito">
+              Ver carrito {cartCount > 0 ? <span className={styles.cartCount}>({cartCount})</span> : null}
+            </Link>
+            {!user ? (
+              <>
+                <Link className={styles.btnGhost} to="/login">
+                  Entrar
+                </Link>
+                <Link className={styles.btnGhost} to="/registro">
+                  Registro
+                </Link>
+              </>
+            ) : null}
+          </div>
         </div>
-        <div className={styles.storeIntroActions}>
-          <Link className={styles.btnPrimary} to="/carrito">
-            Ver carrito
-          </Link>
-          {!user ? (
-            <>
-              <Link className={styles.btnGhost} to="/login">
-                Entrar
-              </Link>
-              <Link className={styles.btnGhost} to="/registro">
-                Registro
-              </Link>
-            </>
-          ) : null}
+        <div>
+          <div className={styles.searchRow}>
+            <input
+              className={styles.searchInput}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar productos…"
+              aria-label="Buscar productos"
+            />
+            {q.trim() ? (
+              <button type="button" className={styles.searchClear} onClick={() => setQ("")} aria-label="Limpiar búsqueda">
+                ✕
+              </button>
+            ) : null}
+          </div>
+          <p className={styles.searchHint}>
+            {q.trim() ? (
+              <>
+                Mostrando <strong>{filteredProducts.length}</strong> de <strong>{products.length}</strong>.
+              </>
+            ) : (
+              <>
+                Productos: <strong>{products.length}</strong>. Busca por nombre o descripción.
+              </>
+            )}
+          </p>
         </div>
       </section>
 
       {msg && <p className={styles.banner}>{msg}</p>}
 
-      {carouselEnabled && products.length > 0 && (
-        <section className={styles.carouselSection} aria-label="Productos destacados">
-          <div className={styles.carouselHead}>
-            <h2 className={styles.sectionTitle}>Destacados</h2>
-            <div className={styles.carouselControls}>
-              <button
-                type="button"
-                className={styles.carouselArrow}
-                aria-label="Anterior"
-                onClick={() => scrollCarouselTo(carouselIndex - 1)}
-              >
-                ‹
-              </button>
-              <button
-                type="button"
-                className={styles.carouselArrow}
-                aria-label="Siguiente"
-                onClick={() => scrollCarouselTo(carouselIndex + 1)}
-              >
-                ›
-              </button>
-            </div>
-          </div>
-
-          <div className={styles.carouselShell}>
-            <div className={styles.carouselViewport} ref={viewportRef}>
-              <div className={styles.carouselTrack}>
-                {displayFeatured.map((p, slideIdx) => (
-                  <div key={`${p.id}-${slideIdx}`} className={styles.carouselSlide}>
-                    <div className={styles.carouselCard}>
-                      <div className={styles.carouselVisual} aria-hidden>
-                        {resolveStoreMediaUrl(p.image_url) ? (
-                          <img
-                            className={styles.carouselImage}
-                            src={resolveStoreMediaUrl(p.image_url)}
-                            alt=""
-                          />
-                        ) : (
-                          <span className={styles.carouselGlyph}>🃏</span>
-                        )}
-                      </div>
-                      <div className={styles.carouselBody}>
-                        <h3 className={styles.carouselName}>{p.name}</h3>
-                        <p className={styles.carouselDesc}>{p.description}</p>
-                        <p className={styles.carouselPrice}>{formatCLP(p.price_cents)}</p>
-                        <button
-                          type="button"
-                          className={styles.btnPrimary}
-                          onClick={() => addToCart(p)}
-                          disabled={p.stock < 1}
-                        >
-                          {p.stock < 1 ? "Agotado" : "Al carrito"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {nFeatured > 1 && (
-            <div className={styles.carouselDots} role="tablist" aria-label="Seleccionar slide">
-              {displayFeatured.map((p, i) => (
-                <button
-                  key={`dot-${p.id}-${i}`}
-                  type="button"
-                  role="tab"
-                  aria-selected={i === carouselIndex}
-                  className={i === carouselIndex ? styles.carouselDotActive : styles.carouselDot}
-                  onClick={() => scrollCarouselTo(i)}
-                  aria-label={`Ver ${p.name}`}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
       <section className={styles.catalogSection}>
         <h2 className={styles.sectionTitle}>Todo el catálogo</h2>
         <div className={styles.grid}>
-          {products.map((p) => (
+          {filteredProducts.map((p) => (
             <article key={p.id} className={styles.card}>
               <div className={styles.cardThumb} aria-hidden>
+                {typeof p.compare_price_cents === "number" && p.compare_price_cents > p.price_cents ? (
+                  <span className={styles.badgeOffer}>Oferta</span>
+                ) : null}
+                <Link to={`/producto/${p.id}`} className={styles.cardLinkCover} aria-label={`Ver ${p.name}`} />
                 {resolveStoreMediaUrl(p.image_url) ? (
                   <img className={styles.cardImage} src={resolveStoreMediaUrl(p.image_url)} alt="" />
                 ) : (
                   <span>🎴</span>
                 )}
               </div>
-              <h2 className={styles.cardTitle}>{p.name}</h2>
+              <h2 className={styles.cardTitle}>
+                <Link to={`/producto/${p.id}`} className={styles.cardTitleLink}>
+                  {p.name}
+                </Link>
+              </h2>
               <p className={styles.cardDesc}>{p.description}</p>
-              <p className={styles.price}>{formatCLP(p.price_cents)}</p>
+              {typeof p.compare_price_cents === "number" && p.compare_price_cents > p.price_cents ? (
+                <p className={styles.priceRow}>
+                  <span className={styles.priceOld}>{formatCLP(p.compare_price_cents)}</span>
+                  <span className={styles.priceNew}>{formatCLP(p.price_cents)}</span>
+                </p>
+              ) : (
+                <p className={styles.price}>{formatCLP(p.price_cents)}</p>
+              )}
               <p className={styles.stock}>Stock: {p.stock}</p>
               <button type="button" className={styles.btnPrimary} onClick={() => addToCart(p)} disabled={p.stock < 1}>
                 {p.stock < 1 ? "Agotado" : "Al carrito"}
@@ -253,6 +185,9 @@ export function Home() {
           ))}
         </div>
         {products.length === 0 && <p className={styles.muted}>Cargando productos…</p>}
+        {products.length > 0 && filteredProducts.length === 0 ? (
+          <p className={styles.muted}>No hay resultados para “{q.trim()}”.</p>
+        ) : null}
       </section>
     </div>
   );

@@ -183,6 +183,18 @@
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
 }
 
+.cardTitleLink {
+  text-decoration: none;
+  color: inherit;
+}
+
+.cardLinkCover {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  text-decoration: none;
+}
+
 .cardTitle {
   font-size: 1.05rem;
   margin: 0;
@@ -200,6 +212,41 @@
   font-size: 1.1rem;
   color: var(--ice);
   margin: 0;
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.priceOld {
+  font-size: 0.92rem;
+  color: rgba(148, 163, 184, 0.95);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  opacity: 0.95;
+}
+
+.priceNew {
+  font-weight: 900;
+  font-size: 1.15rem;
+  color: var(--ice);
+}
+
+.badgeOffer {
+  display: inline-flex;
+  align-items: center;
+  height: 1.55rem;
+  padding: 0 0.65rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
 
 .stock {
@@ -283,6 +330,69 @@
   margin-bottom: 1.5rem;
   padding-bottom: 1.25rem;
   border-bottom: 1px solid var(--border);
+}
+
+.storeIntroTop {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+}
+
+.cartCount {
+  font-weight: 800;
+  opacity: 0.95;
+}
+
+.searchRow {
+  margin-top: 0.75rem;
+  position: relative;
+  max-width: 520px;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.85rem 2.5rem 0.85rem 0.95rem;
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  background: rgba(2, 6, 23, 0.35);
+  color: var(--text);
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+}
+
+.searchInput::placeholder {
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.searchInput:focus {
+  border-color: rgba(125, 211, 252, 0.45);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18);
+}
+
+.searchClear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(2, 6, 23, 0.35);
+  color: rgba(226, 232, 240, 0.95);
+  cursor: pointer;
+}
+
+.searchClear:hover {
+  border-color: rgba(125, 211, 252, 0.45);
+}
+
+.searchHint {
+  margin: 0.55rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .storeIntroTitle {
@@ -430,7 +540,10 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
+  display: block;
 }
+
 
 .carouselGlyph {
   font-size: 3.5rem;
@@ -495,18 +608,527 @@
   height: 120px;
   border-radius: 12px;
   margin-bottom: 0.65rem;
-  background: radial-gradient(circle at 40% 30%, rgba(167, 139, 250, 0.3), transparent 55%),
-    linear-gradient(145deg, #2e1065, #0a0512);
+  background: linear-gradient(180deg, rgba(2, 6, 23, 0.55), rgba(2, 6, 23, 0.25));
   border: 1px solid var(--border-soft);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 2.25rem;
   overflow: hidden;
+  padding: 0;
+  position: relative;
+}
+
+.cardThumb .badgeOffer {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+}
+
+.cardThumb .cardLinkCover {
+  z-index: 2;
+}
+
+.cardThumb .badgeOffer {
+  z-index: 3;
 }
 
 .cardImage {
   width: 100%;
   height: 100%;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  transform: none;
+}
+
+/* === Singles (estilo marketplace tipo TCGplayer) === */
+.singlesShell {
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: 1.25rem 1.1rem 2.5rem;
+}
+
+.singlesTopbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.singlesKicker {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.95);
+}
+
+.singlesTitle {
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.singlesTopActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.singlesTopBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  padding: 0.65rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: rgba(2, 6, 23, 0.35);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.singlesPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.55rem;
+  height: 1.55rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.18);
+  border: 1px solid rgba(125, 211, 252, 0.25);
+  color: rgba(226, 232, 240, 0.95);
+  font-size: 0.85rem;
+}
+
+.singlesLayout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 1.2rem;
+  align-items: start;
+}
+
+@media (max-width: 980px) {
+  .singlesLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.singlesSidebar {
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  background: rgba(2, 6, 23, 0.28);
+  padding: 1rem;
+}
+
+.singlesFilterTitle {
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+}
+
+.singlesField {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.singlesInput {
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: rgba(2, 6, 23, 0.35);
+  color: var(--text);
+  outline: none;
+}
+
+.singlesRow2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.6rem;
+}
+
+.singlesCheck {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.35rem 0 0.8rem;
+  color: rgba(226, 232, 240, 0.92);
+  font-size: 0.9rem;
+}
+
+.singlesHint {
+  font-size: 0.85rem;
+  color: rgba(148, 163, 184, 0.95);
+}
+
+.singlesMain {
+  min-width: 0;
+}
+
+.singlesControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.singlesResults {
+  color: rgba(148, 163, 184, 0.95);
+  font-size: 0.9rem;
+}
+
+.singlesSort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(148, 163, 184, 0.95);
+  font-size: 0.9rem;
+}
+
+.singlesSelect {
+  padding: 0.55rem 0.7rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: rgba(2, 6, 23, 0.35);
+  color: var(--text);
+  outline: none;
+}
+
+.singlesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 0.85rem;
+}
+
+.singlesCard {
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(180deg, rgba(2, 6, 23, 0.62), rgba(2, 6, 23, 0.38));
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.38);
+  display: flex;
+  flex-direction: column;
+}
+
+.singlesCardLink {
+  text-decoration: none;
+  color: rgba(241, 245, 249, 0.96);
+}
+
+.singlesThumb {
+  height: 150px;
+  background: linear-gradient(180deg, rgba(2, 6, 23, 0.35), rgba(2, 6, 23, 0.12));
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.singlesImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+}
+
+.singlesGlyph {
+  font-size: 2.25rem;
+  opacity: 0.8;
+}
+
+.singlesCardBody {
+  padding: 0.7rem 0.75rem 0.75rem;
+}
+
+.singlesName {
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: 0.35rem;
+  color: rgba(241, 245, 249, 0.96);
+}
+
+.singlesPrice {
+  font-size: 1.02rem;
+  font-weight: 900;
+  color: rgba(241, 245, 249, 0.98);
+}
+
+.singlesMeta {
+  margin-top: 0.25rem;
+  font-size: 0.82rem;
+  color: rgba(148, 163, 184, 0.92);
+}
+
+.singlesAddBtn {
+  margin: 0.65rem 0.75rem 0.85rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 12px;
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.18), rgba(59, 130, 246, 0.12));
+  color: rgba(241, 245, 249, 0.95);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.singlesAddBtn:hover {
+  border-color: rgba(125, 211, 252, 0.4);
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.26), rgba(59, 130, 246, 0.16));
+}
+
+.singlesAddBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.singlesEmpty {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 14px;
+  border: 1px dashed var(--border-soft);
+  color: rgba(148, 163, 184, 0.95);
+  background: rgba(2, 6, 23, 0.18);
+}
+
+.singlesPager {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.singlesPagerBtn {
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: rgba(2, 6, 23, 0.35);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.singlesPagerBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.singlesPagerMid {
+  color: rgba(148, 163, 184, 0.95);
+  font-size: 0.9rem;
+}
+
+/* Detalle de producto */
+.detailWrap {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .detailGrid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+}
+
+.detailImageFrame {
+  width: 100%;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(2, 6, 23, 0.45), rgba(2, 6, 23, 0.18));
+  border: 1px solid var(--border-soft);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 10;
+}
+
+.detailImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+}
+
+.detailGlyph {
+  font-size: 4rem;
+  opacity: 0.8;
+}
+
+.detailThumbs {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.6rem;
+}
+
+.detailThumbBtn {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  border: 1px solid var(--border-soft);
+  background: rgba(2, 6, 23, 0.25);
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+}
+
+.detailThumbImg {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.detailTitle {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.detailPriceSolo {
+  margin-top: 0.55rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--ice);
+}
+
+.detailPriceRow {
+  margin-top: 0.55rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.detailPriceOld {
+  font-size: 1.05rem;
+  color: rgba(148, 163, 184, 0.95);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
+.detailPriceNew {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: var(--ice);
+}
+
+.detailTax {
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.detailActions {
+  margin-top: 1.1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.detailBtnLight {
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  color: rgba(241, 245, 249, 0.96);
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.18), rgba(59, 130, 246, 0.12));
+  font-weight: 700;
+}
+
+.detailBtnDark {
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  color: rgba(248, 250, 252, 0.96);
+  background: rgba(15, 23, 42, 0.92);
+  font-weight: 700;
+}
+
+.detailBtnLight:disabled,
+.detailBtnDark:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.detailQtyRow {
+  margin-top: 1.1rem;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.detailQtyLabel {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.detailQtyControl {
+  display: inline-grid;
+  grid-template-columns: 2.2rem 3.2rem 2.2rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(2, 6, 23, 0.35);
+}
+
+.detailQtyControl button {
+  border: none;
+  background: transparent;
+  font-size: 1.1rem;
+  padding: 0.35rem 0;
+  cursor: pointer;
+}
+
+.detailQtyControl input {
+  border: none;
+  text-align: center;
+  background: transparent;
+  padding: 0.35rem 0.25rem;
+  font-weight: 700;
+  outline: none;
+}
+
+.detailStockHint {
+  justify-self: end;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.detailDescBlock {
+  margin-top: 1.2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-soft);
+}
+
+.detailDescTitle {
+  font-weight: 800;
+  margin-bottom: 0.35rem;
+}
+
+.detailDesc {
+  color: rgba(226, 232, 240, 0.9);
+  line-height: 1.55;
+}
+
+.detailBackRow {
+  margin-top: 1.25rem;
 }

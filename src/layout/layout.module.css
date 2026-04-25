@@ -20,16 +20,65 @@
   z-index: 10;
 }
 
-.brand {
+.headerCosmic {
+  background: linear-gradient(180deg, rgba(2, 6, 23, 0.92), rgba(3, 7, 18, 0.82));
+  border-bottom: 1px solid rgba(56, 189, 248, 0.24);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.045) inset, 0 1px 0 rgba(56, 189, 248, 0.08) inset, 0 16px 48px rgba(0, 0, 0, 0.5),
+    0 0 56px rgba(14, 165, 233, 0.1);
+  padding-left: clamp(1rem, 3vw, 2rem);
+  padding-right: clamp(1rem, 3vw, 2rem);
+}
+
+.brandRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  text-decoration: none;
+}
+
+.brandOrb {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  filter: drop-shadow(0 0 14px rgba(56, 189, 248, 0.35)) drop-shadow(0 0 18px rgba(245, 158, 11, 0.2));
+}
+
+.headerCosmic .brandOrb {
+  /* Mismo “tono” que el menú/encabezado en la landing */
+  background: linear-gradient(180deg, rgba(2, 6, 23, 0.92), rgba(3, 7, 18, 0.82));
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+}
+
+.headerCosmic .brandOrb img {
+  /* En fondo oscuro, evita que el logo se apague */
+  mix-blend-mode: normal;
+  filter: contrast(1.08) saturate(1.12) brightness(1.18);
+}
+
+.brandOrb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  mix-blend-mode: normal;
+  filter: contrast(1.08) saturate(1.12);
+}
+
+.brandText {
   font-weight: 800;
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   letter-spacing: -0.02em;
-  background: linear-gradient(90deg, var(--ice), var(--accent-strong));
+  background: linear-gradient(90deg, #f0f9ff, #bae6fd 45%, #7dd3fc);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  text-decoration: none;
-  text-shadow: 0 0 24px var(--plasma-glow);
+  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.35));
 }
 
 .nav {
@@ -37,6 +86,93 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem 1.25rem;
+}
+
+.navDrop {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.navDropTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.navDropChev {
+  opacity: 0.8;
+  transform: translateY(-1px);
+}
+
+.navDropPanel {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 10px);
+  min-width: min(78vw, 520px);
+  padding: 0.85rem 0.85rem 0.65rem;
+  border-radius: 18px;
+  background: linear-gradient(165deg, rgba(30, 27, 75, 0.3), rgba(2, 6, 23, 0.72));
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 18px 60px rgba(0, 0, 0, 0.55),
+    0 0 32px rgba(56, 189, 248, 0.12);
+  opacity: 0;
+  transform: translateY(8px) scale(0.985);
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+  z-index: 20;
+}
+
+.navDrop:hover .navDropPanel {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.navDropGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.navDropItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(2, 6, 23, 0.28);
+  text-decoration: none;
+  color: rgba(241, 245, 249, 0.92);
+}
+
+.navDropItem:hover {
+  border-color: rgba(125, 211, 252, 0.32);
+  background: rgba(56, 189, 248, 0.08);
+  color: #fff;
+}
+
+.navDropHint {
+  color: rgba(148, 163, 184, 0.95);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.navDropEmpty {
+  padding: 0.75rem;
+  color: rgba(148, 163, 184, 0.95);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 720px) {
+  .navDropGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .nav a {
@@ -48,6 +184,73 @@
 
 .nav a:hover {
   color: var(--accent);
+}
+
+.navCosmic a,
+.navCosmic .linkbtn {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #f1f5f9;
+}
+
+.navCosmic a:hover {
+  color: #7dd3fc;
+}
+
+.navCosmic .user {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: none;
+  color: #94a3b8;
+}
+
+.navCosmic .muted {
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+}
+
+.navCart {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.navCartIcon {
+  flex-shrink: 0;
+  opacity: 0.92;
+  transform: translateY(1px);
+}
+
+.navReg {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.72;
+  color: #94a3b8;
+}
+
+.navReg:hover {
+  color: #7dd3fc;
+  opacity: 1;
+}
+
+.navMiCuenta {
+  color: #f1f5f9;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.navMiCuenta:hover {
+  color: #7dd3fc;
+}
+
+.navCosmic .navMiCuenta {
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 .user {
@@ -82,6 +285,14 @@
   max-width: 1040px;
   margin: 0 auto;
   padding: 1.75rem 1.25rem 2.5rem;
+}
+
+.mainLanding {
+  flex: 1;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
 }
 
 .footer {

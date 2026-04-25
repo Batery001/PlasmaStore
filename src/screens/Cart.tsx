@@ -16,6 +16,7 @@ type Line = {
 export function Cart() {
   const { user, loading } = useAuth();
   const [items, setItems] = useState<Line[]>([]);
+  const [msg, setMsg] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -68,6 +69,7 @@ export function Cart() {
   return (
     <div>
       <h1 className={styles.pageTitle}>Carrito</h1>
+      {msg ? <p className={styles.banner}>{msg}</p> : null}
       {items.length === 0 ? (
         <p className={styles.muted}>
           Vacío. <Link to="/catalogo">Seguir comprando</Link>
@@ -107,6 +109,39 @@ export function Cart() {
           <p className={styles.muted}>
             Todos los montos están en pesos chilenos (CLP). Demo: sin pasarela de pago.
           </p>
+          <div className={styles.heroActions} style={{ justifyContent: "flex-start" }}>
+            <button
+              type="button"
+              className={styles.btnPrimary}
+              onClick={async () => {
+                setMsg(null);
+                try {
+                  const r = await fetch("/api/store/checkout/webpay/create", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({}),
+                  });
+                  const j = await r.json().catch(() => ({}));
+                  if (!r.ok || !j.ok) throw new Error(j.error || "No se pudo iniciar Webpay.");
+                  const form = document.createElement("form");
+                  form.method = "POST";
+                  form.action = j.url;
+                  const input = document.createElement("input");
+                  input.type = "hidden";
+                  input.name = "token_ws";
+                  input.value = j.token;
+                  form.appendChild(input);
+                  document.body.appendChild(form);
+                  form.submit();
+                } catch (e) {
+                  setMsg(e instanceof Error ? e.message : "Error iniciando pago.");
+                }
+              }}
+            >
+              Pagar con Webpay
+            </button>
+          </div>
         </>
       )}
     </div>
