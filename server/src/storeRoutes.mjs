@@ -857,23 +857,83 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
 
       const approved = String(commitResp?.status || "").toUpperCase() === "AUTHORIZED";
       const status = approved ? "paid" : "payment_failed";
+      const now = new Date();
       await db.collection("store_orders").updateOne(
         { _id: order._id },
         {
           $set: {
             status,
             "payment.commit": commitResp ?? null,
-            updatedAt: new Date(),
+            updatedAt: now,
           },
         }
       );
 
-      // Si pagó, vaciamos carrito
+      let inventoryApplied = false;
+      let inventoryWarning = null;
+
+      // Si pagó, descontar stock (idempotente por orden)
       if (approved) {
-        await db.collection("cart_items").deleteMany({ user_id: u.id });
+        const fresh = await db.collection("store_orders").findOne({ _id: order._id }, { projection: { items: 1, inventory_applied: 1 } });
+        if (fresh?.inventory_applied) {
+          inventoryApplied = true;
+        } else {
+          const items = Array.isArray(fresh?.items) ? fresh.items : [];
+          /** @type {Array<{ product_id: number, quantity: number }>} */
+          const touched = [];
+          try {
+            for (const it of items) {
+              const pid = parseInt(String(it?.product_id ?? 0), 10);
+              const qty = parseInt(String(it?.quantity ?? 0), 10);
+              if (!Number.isFinite(pid) || pid < 1 || !Number.isFinite(qty) || qty < 1) continue;
+
+              const r = await db.collection("products").updateOne(
+                { _id: pid, active: { $ne: 0 }, stock: { $gte: qty } },
+                { $inc: { stock: -qty }, $set: { updatedAt: now } }
+              );
+              if (!r?.modifiedCount) {
+                throw Object.assign(new Error(`Stock insuficiente para producto #${pid}.`), { code: "STOCK_RACE", product_id: pid });
+              }
+              touched.push({ product_id: pid, quantity: qty });
+            }
+
+            await db.collection("store_orders").updateOne(
+              { _id: order._id },
+              { $set: { inventory_applied: true, inventory_applied_at: now, updatedAt: now } }
+            );
+            inventoryApplied = true;
+          } catch (e) {
+            // rollback best-effort si alcanzamos a descontar algo
+            for (const t of touched) {
+              try {
+                await db.collection("products").updateOne({ _id: t.product_id }, { $inc: { stock: t.quantity }, $set: { updatedAt: now } });
+              } catch {
+                /* ignore */
+              }
+            }
+            inventoryWarning = e instanceof Error ? e.message : "No se pudo descontar stock automáticamente.";
+            await db.collection("store_orders").updateOne(
+              { _id: order._id },
+              { $set: { inventory_applied: false, inventory_error: inventoryWarning, updatedAt: now } }
+            );
+          }
+        }
+
+        // Si se aplicó inventario, vaciamos carrito
+        if (inventoryApplied) {
+          await db.collection("cart_items").deleteMany({ user_id: u.id });
+        }
       }
 
-      res.json({ ok: true, approved, status, orderId: order._id, commit: commitResp ?? null });
+      res.json({
+        ok: true,
+        approved,
+        status,
+        orderId: order._id,
+        commit: commitResp ?? null,
+        inventoryApplied,
+        inventoryWarning,
+      });
     } catch (e) {
       handleErr(res, e);
     }
