@@ -399,9 +399,112 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
       const uid = userIdFromSession(s.uid);
       if (uid == null) return res.json({ user: null });
       const db = await getDb();
-      const u = await db.collection("store_users").findOne({ _id: uid }, { projection: { email: 1, name: 1, role: 1 } });
+      const u = await db.collection("store_users").findOne(
+        { _id: uid },
+        { projection: { email: 1, name: 1, role: 1, username: 1, first_name: 1, last_name: 1, birth_day: 1, birth_month: 1, birth_year: 1 } }
+      );
       if (!u) return res.json({ user: null });
-      res.json({ user: { id: u._id, email: u.email, name: u.name, role: u.role } });
+      res.json({
+        user: {
+          id: u._id,
+          email: u.email,
+          name: u.name,
+          role: u.role,
+          username: u.username ?? null,
+          first_name: u.first_name ?? null,
+          last_name: u.last_name ?? null,
+          birth_day: u.birth_day ?? null,
+          birth_month: u.birth_month ?? null,
+          birth_year: u.birth_year ?? null,
+        },
+      });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  app.patch("/api/store/me", async (req, res) => {
+    try {
+      const u = await requireUser(req);
+      const db = await getDb();
+
+      const patch = {};
+
+      if (req.body?.username != null) {
+        const usernameRaw = String(req.body.username || "").trim();
+        const username = usernameRaw.toLowerCase();
+        if (!username || username.length < 3) return res.status(400).json({ ok: false, error: "Nombre de usuario inválido (mín. 3 caracteres)." });
+        if (!/^[a-z0-9_\\.\\-]+$/i.test(username)) {
+          return res.status(400).json({ ok: false, error: "El nombre de usuario solo puede usar letras, números, guión, punto y guión bajo." });
+        }
+        const existsUser = await db.collection("store_users").findOne({ username, _id: { $ne: u.id } }, { projection: { _id: 1 } });
+        if (existsUser) return res.status(409).json({ ok: false, error: "Ese nombre de usuario ya está en uso." });
+        patch.username = username;
+      }
+
+      const first_name = req.body?.first_name != null ? String(req.body.first_name || "").trim() : null;
+      const last_name = req.body?.last_name != null ? String(req.body.last_name || "").trim() : null;
+      if (first_name != null) {
+        if (!first_name) return res.status(400).json({ ok: false, error: "Nombre inválido." });
+        patch.first_name = first_name;
+      }
+      if (last_name != null) {
+        if (!last_name) return res.status(400).json({ ok: false, error: "Apellido inválido." });
+        patch.last_name = last_name;
+      }
+
+      const birth_day = req.body?.birth_day != null ? parseInt(String(req.body.birth_day ?? ""), 10) : null;
+      const birth_month = req.body?.birth_month != null ? parseInt(String(req.body.birth_month ?? ""), 10) : null;
+      const birth_year = req.body?.birth_year != null ? parseInt(String(req.body.birth_year ?? ""), 10) : null;
+      const anyBirth = birth_day != null || birth_month != null || birth_year != null;
+      if (anyBirth) {
+        if (!Number.isFinite(birth_day) || birth_day < 1 || birth_day > 31) return res.status(400).json({ ok: false, error: "Día de nacimiento inválido." });
+        if (!Number.isFinite(birth_month) || birth_month < 1 || birth_month > 12) return res.status(400).json({ ok: false, error: "Mes de nacimiento inválido." });
+        const nowYear = new Date().getFullYear();
+        if (!Number.isFinite(birth_year) || birth_year < 1900 || birth_year > nowYear) return res.status(400).json({ ok: false, error: "Año de nacimiento inválido." });
+        const dob = new Date(Date.UTC(birth_year, birth_month - 1, birth_day));
+        if (dob.getUTCFullYear() !== birth_year || dob.getUTCMonth() !== birth_month - 1 || dob.getUTCDate() !== birth_day) {
+          return res.status(400).json({ ok: false, error: "Fecha de nacimiento inválida." });
+        }
+        patch.birth_day = birth_day;
+        patch.birth_month = birth_month;
+        patch.birth_year = birth_year;
+        patch.birth_date = dob;
+      }
+
+      // name mostrado (fallback): si cambian nombre/apellido, recalcular
+      if (patch.first_name != null || patch.last_name != null) {
+        const row = await db.collection("store_users").findOne({ _id: u.id }, { projection: { first_name: 1, last_name: 1, email: 1 } });
+        const fn = patch.first_name ?? row?.first_name ?? "";
+        const ln = patch.last_name ?? row?.last_name ?? "";
+        const email = row?.email ?? "";
+        patch.name = `${String(fn).trim()} ${String(ln).trim()}`.trim() || String(email).split("@")[0] || "usuario";
+      }
+
+      if (Object.keys(patch).length === 0) return res.json({ ok: true });
+
+      await db.collection("store_users").updateOne({ _id: u.id }, { $set: { ...patch, updatedAt: new Date() } });
+      const updated = await db.collection("store_users").findOne(
+        { _id: u.id },
+        { projection: { email: 1, name: 1, role: 1, username: 1, first_name: 1, last_name: 1, birth_day: 1, birth_month: 1, birth_year: 1 } }
+      );
+      res.json({
+        ok: true,
+        user: updated
+          ? {
+              id: updated._id,
+              email: updated.email,
+              name: updated.name,
+              role: updated.role,
+              username: updated.username ?? null,
+              first_name: updated.first_name ?? null,
+              last_name: updated.last_name ?? null,
+              birth_day: updated.birth_day ?? null,
+              birth_month: updated.birth_month ?? null,
+              birth_year: updated.birth_year ?? null,
+            }
+          : null,
+      });
     } catch (e) {
       handleErr(res, e);
     }
@@ -488,12 +591,13 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
   app.post("/api/store/login", async (req, res) => {
     try {
       const db = await getDb();
-      const email = String(req.body?.email || req.body?.emailOrUser || "")
-        .trim()
-        .toLowerCase();
+      const loginId = String(req.body?.email || req.body?.emailOrUser || "")
+        .trim();
+      const email = loginId.toLowerCase();
       const password = String(req.body?.password || "").trim();
-      if (!email || !password) return res.status(400).json({ ok: false, error: "Faltan credenciales." });
-      const row = await db.collection("store_users").findOne({ email });
+      if (!loginId || !password) return res.status(400).json({ ok: false, error: "Faltan credenciales." });
+      const isEmail = loginId.includes("@");
+      const row = await db.collection("store_users").findOne(isEmail ? { email } : { username: loginId.toLowerCase() });
       if (!row?.pass_hash) return res.status(401).json({ ok: false, error: "Usuario o contraseña incorrectos." });
       const ok = await bcrypt.compare(password, String(row.pass_hash));
       if (!ok) return res.status(401).json({ ok: false, error: "Usuario o contraseña incorrectos." });

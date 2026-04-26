@@ -67,7 +67,7 @@ export function Layout() {
               ) : user ? (
                 <>
                   <Link
-                    to="/catalogo"
+                    to="/perfil"
                     className={styles.navMiCuenta}
                     title={`${user.name}${user.role === "admin" ? " · admin" : ""}`}
                   >

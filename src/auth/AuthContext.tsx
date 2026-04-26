@@ -14,6 +14,12 @@ export type StoreUser = {
   email: string;
   name: string;
   role: "customer" | "admin";
+  username?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  birth_day?: number | null;
+  birth_month?: number | null;
+  birth_year?: number | null;
 };
 
 type AuthState = {

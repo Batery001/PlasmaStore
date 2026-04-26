@@ -18,6 +18,7 @@ import { WebpayReturn } from "./screens/WebpayReturn";
 import { ProductDetail } from "./screens/ProductDetail";
 import { SinglesCatalog } from "./screens/SinglesCatalog";
 import { AdminSingles } from "./screens/AdminSingles";
+import { Profile } from "./screens/Profile";
 
 export default function App() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="webpay/return" element={<WebpayReturn />} />
         <Route path="login" element={<Login />} />
         <Route path="registro" element={<Register />} />
+        <Route path="perfil" element={<Profile />} />
         <Route path="catalogo" element={<Catalog />} />
         <Route path="singles" element={<SinglesCatalog />} />
         <Route path="producto/:id" element={<ProductDetail />} />
