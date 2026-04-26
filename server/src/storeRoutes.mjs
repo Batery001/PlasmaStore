@@ -419,6 +419,9 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
       const username = usernameRaw.toLowerCase();
       const first_name = String(req.body?.first_name || req.body?.firstName || "").trim();
       const last_name = String(req.body?.last_name || req.body?.lastName || "").trim();
+      const birth_day = parseInt(String(req.body?.birth_day ?? ""), 10);
+      const birth_month = parseInt(String(req.body?.birth_month ?? ""), 10);
+      const birth_year = parseInt(String(req.body?.birth_year ?? ""), 10);
       const email = String(req.body?.email || "")
         .trim()
         .toLowerCase();
@@ -439,6 +442,20 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
       if (!first_name || !last_name) {
         return res.status(400).json({ ok: false, error: "Ingresa nombre y apellido." });
       }
+      if (!Number.isFinite(birth_day) || birth_day < 1 || birth_day > 31) {
+        return res.status(400).json({ ok: false, error: "Día de nacimiento inválido." });
+      }
+      if (!Number.isFinite(birth_month) || birth_month < 1 || birth_month > 12) {
+        return res.status(400).json({ ok: false, error: "Mes de nacimiento inválido." });
+      }
+      const nowYear = new Date().getFullYear();
+      if (!Number.isFinite(birth_year) || birth_year < 1900 || birth_year > nowYear) {
+        return res.status(400).json({ ok: false, error: "Año de nacimiento inválido." });
+      }
+      const dob = new Date(Date.UTC(birth_year, birth_month - 1, birth_day));
+      if (dob.getUTCFullYear() !== birth_year || dob.getUTCMonth() !== birth_month - 1 || dob.getUTCDate() !== birth_day) {
+        return res.status(400).json({ ok: false, error: "Fecha de nacimiento inválida." });
+      }
       const exists = await db.collection("store_users").findOne({ email }, { projection: { _id: 1 } });
       if (exists) return res.status(409).json({ ok: false, error: "Ese email ya está registrado." });
       const existsUser = await db.collection("store_users").findOne({ username }, { projection: { _id: 1 } });
@@ -450,6 +467,10 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
         username,
         first_name,
         last_name,
+        birth_day,
+        birth_month,
+        birth_year,
+        birth_date: dob,
         email,
         name,
         role: "customer",

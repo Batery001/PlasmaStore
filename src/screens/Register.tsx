@@ -10,6 +10,9 @@ export function Register() {
   const [username, setUsername] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [birthDay, setBirthDay] = useState("");
+  const [birthMonth, setBirthMonth] = useState("");
+  const [birthYear, setBirthYear] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
@@ -33,6 +36,9 @@ export function Register() {
           username,
           first_name: firstName,
           last_name: lastName,
+          birth_day: birthDay,
+          birth_month: birthMonth,
+          birth_year: birthYear,
           email,
           password,
           password_confirm: password2,
@@ -70,6 +76,38 @@ export function Register() {
         <label className={styles.label}>
           Apellido
           <input className={styles.input} value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+        </label>
+        <label className={styles.label}>
+          Fecha de nacimiento
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+            <input
+              className={styles.input}
+              inputMode="numeric"
+              placeholder="Día"
+              aria-label="Día de nacimiento"
+              value={birthDay}
+              onChange={(e) => setBirthDay(e.target.value)}
+              required
+            />
+            <input
+              className={styles.input}
+              inputMode="numeric"
+              placeholder="Mes"
+              aria-label="Mes de nacimiento"
+              value={birthMonth}
+              onChange={(e) => setBirthMonth(e.target.value)}
+              required
+            />
+            <input
+              className={styles.input}
+              inputMode="numeric"
+              placeholder="Año"
+              aria-label="Año de nacimiento"
+              value={birthYear}
+              onChange={(e) => setBirthYear(e.target.value)}
+              required
+            />
+          </div>
         </label>
         <label className={styles.label}>
           Email
