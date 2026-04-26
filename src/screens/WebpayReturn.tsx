@@ -52,11 +52,16 @@ export function WebpayReturn() {
       {status === "loading" ? <p className={styles.muted}>Confirmando pago…</p> : null}
       {msg ? <p className={status === "ok" ? styles.banner : styles.error}>{msg}</p> : null}
       {status === "ok" ? (
-        <div style={{ display: "grid", placeItems: "center", margin: "1rem 0" }}>
+        <div style={{ display: "grid", placeItems: "center", margin: "0.5rem 0 1rem" }}>
           <img
             src="/mascot-hero.png"
             alt="Mascota Plasma Store"
-            style={{ width: "min(340px, 100%)", height: "auto", filter: "drop-shadow(0 10px 35px rgba(91, 33, 182, 0.55))" }}
+            style={{
+              width: "min(360px, 100%)",
+              height: "auto",
+              transform: "translateY(-22px)",
+              filter: "drop-shadow(0 10px 35px rgba(91, 33, 182, 0.55))",
+            }}
           />
         </div>
       ) : null}
