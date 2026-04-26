@@ -60,6 +60,7 @@ export function WebpayReturn() {
               width: "min(360px, 100%)",
               height: "auto",
               transform: "translateY(-22px)",
+              clipPath: "polygon(0 0, 100% 0, 100% 100%, 58% 100%, 0 86%, 0 0)",
               filter: "drop-shadow(0 10px 35px rgba(91, 33, 182, 0.55))",
             }}
           />

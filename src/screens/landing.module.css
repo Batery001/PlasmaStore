@@ -467,7 +467,7 @@
   mix-blend-mode: normal;
   filter: contrast(1.06) brightness(1.08) saturate(1.12);
   /* Marca IA en PNG esquina inferior izquierda */
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 38% 100%, 0 80%, 0 0);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 58% 100%, 0 86%, 0 0);
 }
 
 .showcase {
