@@ -62,7 +62,7 @@ export function Register() {
         <label className={styles.label}>
           Nombre de usuario
           <input
-            className={styles.input}
+            className={`${styles.input} ${styles.inputCompact}`}
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoComplete="username"
@@ -71,17 +71,27 @@ export function Register() {
         </label>
         <label className={styles.label}>
           Nombre
-          <input className={styles.input} value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+          <input
+            className={`${styles.input} ${styles.inputCompact}`}
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            required
+          />
         </label>
         <label className={styles.label}>
           Apellido
-          <input className={styles.input} value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+          <input
+            className={`${styles.input} ${styles.inputCompact}`}
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            required
+          />
         </label>
         <label className={styles.label}>
           Fecha de nacimiento
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+          <div className={styles.tripleRow}>
             <input
-              className={styles.input}
+              className={`${styles.input} ${styles.inputCompact}`}
               inputMode="numeric"
               placeholder="Día"
               aria-label="Día de nacimiento"
@@ -90,7 +100,7 @@ export function Register() {
               required
             />
             <input
-              className={styles.input}
+              className={`${styles.input} ${styles.inputCompact}`}
               inputMode="numeric"
               placeholder="Mes"
               aria-label="Mes de nacimiento"
@@ -99,7 +109,7 @@ export function Register() {
               required
             />
             <input
-              className={styles.input}
+              className={`${styles.input} ${styles.inputCompact}`}
               inputMode="numeric"
               placeholder="Año"
               aria-label="Año de nacimiento"
@@ -112,7 +122,7 @@ export function Register() {
         <label className={styles.label}>
           Email
           <input
-            className={styles.input}
+            className={`${styles.input} ${styles.inputCompact}`}
             type="email"
             autoComplete="email"
             value={email}
@@ -123,7 +133,7 @@ export function Register() {
         <label className={styles.label}>
           Contraseña (mín. 6)
           <input
-            className={styles.input}
+            className={`${styles.input} ${styles.inputCompact}`}
             type="password"
             autoComplete="new-password"
             value={password}
@@ -135,7 +145,7 @@ export function Register() {
         <label className={styles.label}>
           Confirmar contraseña
           <input
-            className={styles.input}
+            className={`${styles.input} ${styles.inputCompact}`}
             type="password"
             autoComplete="new-password"
             value={password2}
