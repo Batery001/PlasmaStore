@@ -12,6 +12,7 @@ loadProjectEnv(root);
 
 const { getDb } = await import("../src/db.mjs");
 const { nextSeq } = await import("../src/counters.mjs");
+const { flushSqlitePersist } = await import("../src/sqliteMongo.mjs");
 
 const email = (process.env.ADMIN_EMAIL || "").trim().toLowerCase();
 const password = process.env.ADMIN_PASSWORD || "";
@@ -51,6 +52,7 @@ await db.collection("store_users").insertOne({
   createdAt: new Date(),
 });
 
+flushSqlitePersist();
 console.log(`Listo. Admin creado: ${email}`);
 console.log("Entra en /login con ese email y contraseña, luego abre /admin");
 process.exit(0);

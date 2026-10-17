@@ -11,6 +11,7 @@ const { loadProjectEnv } = await import("../src/loadProjectEnv.mjs");
 loadProjectEnv(root);
 
 const { getDb } = await import("../src/db.mjs");
+const { flushSqlitePersist } = await import("../src/sqliteMongo.mjs");
 
 const email = (process.env.ADMIN_EMAIL || "").trim().toLowerCase();
 const password = process.env.ADMIN_PASSWORD || "";
@@ -33,6 +34,7 @@ if (r.matchedCount === 0) {
   process.exit(1);
 }
 
+flushSqlitePersist();
 console.log(`Listo. pass_hash actualizado (bcrypt) para: ${email}`);
 console.log("Prueba de nuevo el login en http://localhost:3000/login");
 process.exit(0);
