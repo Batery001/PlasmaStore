@@ -4,6 +4,7 @@ import { resolveStoreMediaUrl } from "../lib/media";
 import { parseResponseJson } from "../lib/parseResponseJson";
 import { formatCLP } from "../lib/money";
 import { useAuth } from "../auth/AuthContext";
+import { notifyCartChanged } from "../lib/cartEvents";
 import styles from "./pages.module.css";
 
 type Product = {
@@ -32,7 +33,7 @@ export function SinglesCatalog() {
   const pageSize = 48;
 
   useEffect(() => {
-    fetch("/api/store/products?tag=singles")
+    fetch("/api/store/products?tag=singles&limit=96")
       .then(async (r) => parseResponseJson<{ products?: Product[] }>(r))
       .then((d) => setProducts(d.products || []))
       .catch(() => setProducts([]));
@@ -118,6 +119,7 @@ export function SinglesCatalog() {
     }
     setCartCount((c) => c + 1);
     setMsg(`Agregado: ${p.name}`);
+    notifyCartChanged();
   }
 
   return (

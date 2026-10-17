@@ -8,12 +8,13 @@ const nextConfig = {
       config.externals = [
         ...(Array.isArray(prev) ? prev : prev != null ? [prev] : []),
         "mongodb",
+        "sql.js",
         "multer",
         "express",
         "bcryptjs",
         "cookie",
         "cors",
-        "fast-xml-parser",
+        "nodemailer",
       ];
     }
     return config;

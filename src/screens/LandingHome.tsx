@@ -4,41 +4,51 @@ import { resolveStoreMediaUrl } from "../lib/media";
 import { formatCLP } from "../lib/money";
 import styles from "./landing.module.css";
 
-/** Posiciones % para partículas estrella (fondo cósmico). */
+/** Posiciones % para partículas estrella (fondo cósmico) — pocas para no saturar GPU. */
 const STARFIELD = [
   [6, 10, "0s"],
-  [14, 6, "0.4s"],
   [22, 16, "0.8s"],
-  [38, 5, "1.1s"],
   [52, 12, "0.2s"],
-  [68, 8, "1.4s"],
   [88, 14, "0.6s"],
-  [94, 22, "1.9s"],
-  [78, 28, "0.3s"],
-  [12, 26, "1.2s"],
   [30, 22, "2s"],
-  [58, 20, "0.9s"],
   [85, 32, "1.6s"],
-  [44, 14, "0.5s"],
   [8, 38, "1.8s"],
-  [91, 8, "0.7s"],
-  [55, 34, "1.3s"],
   [72, 38, "2.1s"],
 ] as const;
 
 /** Partículas mágicas más finas que las estrellas. */
 const DUST = [
   [11, 18, "0.1s"],
-  [27, 9, "0.7s"],
   [41, 24, "1.4s"],
-  [63, 14, "0.3s"],
   [76, 31, "2s"],
-  [89, 19, "0.9s"],
-  [18, 44, "1.1s"],
   [54, 42, "0.5s"],
-  [33, 7, "1.8s"],
-  [71, 11, "0.2s"],
 ] as const;
+
+type SiteContent = {
+  singles_enabled?: boolean;
+  socials?: Record<string, { enabled?: boolean; url?: string }>;
+  about?: { enabled?: boolean; title?: string; body?: string };
+  home_cards?: { sealed_image_url?: string; events_image_url?: string };
+  events?: {
+    enabled?: boolean;
+    title?: string;
+    subtitle?: string;
+    items?: Array<{
+      id: number;
+      title: string;
+      date_label?: string;
+      place?: string;
+      description?: string;
+    }>;
+  };
+};
+
+const SOCIAL_GLYPH: Record<string, string> = {
+  facebook: "f",
+  instagram: "ig",
+  youtube: "yt",
+  whatsapp: "wa",
+};
 
 /**
  * Inicio premium: vacío eléctrico, plasma, tarjetas flotantes, vitrina cristal (brief visual).
@@ -57,6 +67,7 @@ export function LandingHome() {
     }>
   >([]);
   const [sealIdx, setSealIdx] = useState(0);
+  const [site, setSite] = useState<SiteContent | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -66,8 +77,9 @@ export function LandingHome() {
         if (!alive) return;
         if (!ok || !j?.ok) return;
         const list = Array.isArray(j.products) ? j.products : [];
-        // No mezclar singles en el carrusel principal (solo catálogo "sellado"/general)
-        const filtered = list.filter((p: (typeof list)[number]) => !(Array.isArray(p?.tags) && p.tags.includes("singles")));
+        const filtered = list.filter(
+          (p: (typeof list)[number]) => !(Array.isArray(p?.tags) && p.tags.includes("singles"))
+        );
         setSealed(filtered);
       })
       .catch(() => {
@@ -77,6 +89,26 @@ export function LandingHome() {
       alive = false;
     };
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/store/site-content")
+      .then((r) => r.json().then((j) => ({ ok: r.ok, j })))
+      .then(({ ok, j }) => {
+        if (!alive || !ok || !j?.ok) return;
+        setSite(j.content || null);
+      })
+      .catch(() => {
+        /* defaults */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const activeSocials = Object.entries(site?.socials || {}).filter(([, v]) => v?.enabled && v?.url);
+  const eventsOn = site?.events?.enabled !== false;
+  const featuredEvent = (site?.events?.items || []).find((e) => e.title) || null;
 
   return (
     <div className={styles.root}>
@@ -116,12 +148,15 @@ export function LandingHome() {
             <div className={styles.mascotWrap}>
               <div className={styles.mascotOuter}>
                 <img
-                  src="/mascot-hero.png"
+                  src="/mascot-hero.webp"
+                  srcSet="/mascot-hero-sm.webp 480w, /mascot-hero.webp 720w"
+                  sizes="(max-width: 640px) 90vw, 680px"
                   alt="Mascota de Plasma Store"
                   className={styles.mascot}
-                  width={420}
-                  height={420}
+                  width={680}
+                  height={856}
                   decoding="async"
+                  fetchPriority="high"
                 />
               </div>
             </div>
@@ -132,19 +167,49 @@ export function LandingHome() {
       <div className={styles.showcase}>
         <div className={styles.featureGrid}>
           <a href="/catalogo" className={`${styles.card} ${styles.cardHero}`}>
-            <div className={styles.tarotStack} aria-hidden>
-              <span className={styles.tarotCard} />
-              <span className={styles.tarotCard} />
-              <span className={styles.tarotCard} />
-            </div>
+            {resolveStoreMediaUrl(site?.home_cards?.sealed_image_url) ? (
+              <div className={styles.cardHeroPhoto}>
+                <img src={resolveStoreMediaUrl(site?.home_cards?.sealed_image_url)} alt="" />
+              </div>
+            ) : (
+              <div className={styles.tarotStack} aria-hidden>
+                <span className={styles.tarotCard} />
+                <span className={styles.tarotCard} />
+                <span className={styles.tarotCard} />
+              </div>
+            )}
             <h3 className={styles.cardTitle}>Sellado</h3>
             <p className={styles.cardHint}>Productos sellados — disponibles en catálogo.</p>
           </a>
-          <a href="/singles" className={`${styles.card} ${styles.cardHero}`}>
-            <div className={styles.cardVisualStar} aria-hidden />
-            <h3 className={styles.cardTitle}>Single</h3>
-            <p className={styles.cardHint}>Cartas sueltas — disponibles en catálogo.</p>
-          </a>
+          {eventsOn ? (
+            <Link to="/eventos" className={`${styles.card} ${styles.cardHero}`}>
+              {resolveStoreMediaUrl(site?.home_cards?.events_image_url) ? (
+                <div className={styles.cardHeroPhoto}>
+                  <img src={resolveStoreMediaUrl(site?.home_cards?.events_image_url)} alt="" />
+                </div>
+              ) : (
+                <div className={styles.cardVisualStar} aria-hidden />
+              )}
+              <h3 className={styles.cardTitle}>{site?.events?.title || "Eventos"}</h3>
+              <p className={styles.cardHint}>
+                {featuredEvent
+                  ? `${featuredEvent.title}${featuredEvent.date_label ? ` · ${featuredEvent.date_label}` : ""}`
+                  : site?.events?.subtitle || "Torneos, lanzamientos y encuentros."}
+              </p>
+            </Link>
+          ) : site?.singles_enabled ? (
+            <a href="/singles" className={`${styles.card} ${styles.cardHero}`}>
+              <div className={styles.cardVisualStar} aria-hidden />
+              <h3 className={styles.cardTitle}>Single</h3>
+              <p className={styles.cardHint}>Cartas sueltas — disponibles en catálogo.</p>
+            </a>
+          ) : (
+            <a href="/catalogo" className={`${styles.card} ${styles.cardHero}`}>
+              <div className={styles.cardVisualStar} aria-hidden />
+              <h3 className={styles.cardTitle}>Catálogo</h3>
+              <p className={styles.cardHint}>Explora todo lo disponible en la tienda.</p>
+            </a>
+          )}
         </div>
         <div className={styles.featureRow4}>
           <section className={styles.sealedSection} aria-label="Sellados destacados">
@@ -174,12 +239,13 @@ export function LandingHome() {
             </div>
 
             {sealed.length === 0 ? (
-              <div className={styles.sealedEmpty}>
-                No hay productos aún.
-              </div>
+              <div className={styles.sealedEmpty}>No hay productos aún.</div>
             ) : (
               <div className={styles.sealedViewport}>
-                <div className={styles.sealedTrack} style={{ transform: `translateX(calc(-${sealIdx} * (320px + 14px)))` }}>
+                <div
+                  className={styles.sealedTrack}
+                  style={{ transform: `translateX(calc(-${sealIdx} * (320px + 14px)))` }}
+                >
                   {sealed.map((p) => (
                     <Link key={p.id} to="/catalogo" className={styles.sealedCard}>
                       <div className={styles.sealedThumb} aria-hidden>
@@ -187,7 +253,13 @@ export function LandingHome() {
                           <span className={styles.sealedBadge}>Oferta</span>
                         ) : null}
                         {resolveStoreMediaUrl(p.image_url) ? (
-                          <img className={styles.sealedImg} src={resolveStoreMediaUrl(p.image_url)} alt="" />
+                          <img
+                            className={styles.sealedImg}
+                            src={resolveStoreMediaUrl(p.image_url)}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                          />
                         ) : (
                           <span className={styles.sealedGlyph}>🎴</span>
                         )}
@@ -221,19 +293,24 @@ export function LandingHome() {
         </div>
       </div>
 
-      <div className={styles.socialBand}>
-        <div className={styles.socialRow} aria-label="Redes sociales">
-          <a href="https://facebook.com" target="_blank" rel="noreferrer noopener" aria-label="Facebook">
-            f
-          </a>
-          <a href="https://twitter.com" target="_blank" rel="noreferrer noopener" aria-label="X">
-            𝕏
-          </a>
-          <a href="https://instagram.com" target="_blank" rel="noreferrer noopener" aria-label="Instagram">
-            in
-          </a>
+      {activeSocials.length > 0 ? (
+        <div className={styles.socialBand}>
+          <div className={styles.socialRow} aria-label="Redes sociales">
+            {activeSocials.map(([key, row]) => (
+              <a
+                key={key}
+                href={row.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label={key}
+                title={key}
+              >
+                {SOCIAL_GLYPH[key] || key.slice(0, 2)}
+              </a>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

@@ -1,6 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&display=swap");
-
-/* Team Plasma: negro profundo, violetas, blanco hielo */
+/* Variables compartidas; el look de tienda vs admin se aísla con data-shell */
 :root {
   --bg: #050308;
   --bg-elevated: #0c0614;
@@ -35,22 +33,64 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: var(--font);
+  line-height: 1.5;
+}
+
+/* ——— TIENDA (cliente) ——— */
+html[data-shell="store"] body,
+html:not([data-shell]) body {
   background-color: var(--bg);
   background-image: radial-gradient(1000px 520px at 15% -15%, rgba(91, 33, 182, 0.42) 0%, transparent 55%),
     radial-gradient(800px 480px at 95% 10%, rgba(124, 58, 237, 0.22) 0%, transparent 50%),
-    linear-gradient(180deg, rgba(10, 5, 18, 0.85) 0%, rgba(5, 3, 8, 0.88) 40%, rgba(3, 1, 6, 0.92) 100%),
-    url("/landing-panel-bg.png");
-  background-size: auto, auto, auto, cover;
-  background-position: 0 0, 0 0, 0 0, center;
-  background-repeat: no-repeat;
-  background-attachment: scroll, scroll, scroll, fixed;
+    linear-gradient(180deg, rgba(10, 5, 18, 0.95) 0%, rgba(5, 3, 8, 0.98) 40%, rgba(3, 1, 6, 1) 100%);
+  background-attachment: scroll;
   color: var(--text);
-  line-height: 1.5;
+}
+
+html[data-shell="store"] input,
+html[data-shell="store"] textarea,
+html[data-shell="store"] select,
+html:not([data-shell]) input,
+html:not([data-shell]) textarea,
+html:not([data-shell]) select {
+  color: var(--text);
+  background: rgba(8, 5, 14, 0.85);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+}
+
+/* ——— ADMIN (backoffice, look claro tipo OpenCart) ——— */
+html[data-shell="admin"] body {
+  background: #f0f2f4;
+  background-image: none;
+  color: #333;
+}
+
+html[data-shell="admin"] input,
+html[data-shell="admin"] textarea,
+html[data-shell="admin"] select {
+  color: #222;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+html[data-shell="admin"] a {
+  color: #1e91cf;
+}
+
+html[data-shell="admin"] a:hover {
+  color: #1578ad;
 }
 
 ::selection {
   background: rgba(167, 139, 250, 0.35);
   color: var(--ice);
+}
+
+html[data-shell="admin"] ::selection {
+  background: rgba(70, 165, 70, 0.25);
+  color: #111;
 }
 
 a {
@@ -70,15 +110,6 @@ button {
   color: inherit;
 }
 
-input,
-textarea,
-select {
-  color: var(--text);
-  background: rgba(8, 5, 14, 0.85);
-  border: 1px solid var(--border-soft);
-  border-radius: 10px;
-}
-
 input:focus,
 textarea:focus,
 select:focus,
@@ -86,6 +117,15 @@ button:focus-visible,
 a:focus-visible {
   outline: 2px solid rgba(125, 211, 252, 0.55);
   outline-offset: 2px;
+}
+
+html[data-shell="admin"] input:focus,
+html[data-shell="admin"] textarea:focus,
+html[data-shell="admin"] select:focus,
+html[data-shell="admin"] button:focus-visible,
+html[data-shell="admin"] a:focus-visible {
+  outline: 2px solid rgba(70, 165, 70, 0.55);
+  outline-offset: 1px;
 }
 
 @media (prefers-reduced-motion: no-preference) {

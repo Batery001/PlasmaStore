@@ -1,0 +1,81 @@
+.root {
+  max-width: 720px;
+  margin: 0 auto 2.5rem;
+  padding: 0 0.25rem;
+}
+
+.kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.title {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.55rem, 3.5vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.meta {
+  margin: 0 0 1.35rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.prose {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.prose h2 {
+  margin: 1.35rem 0 0.45rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--ice);
+}
+
+.prose p,
+.prose ul {
+  margin: 0 0 0.75rem;
+}
+
+.prose ul {
+  padding-left: 1.2rem;
+}
+
+.prose li {
+  margin-bottom: 0.35rem;
+}
+
+.prose a {
+  color: var(--link);
+  font-weight: 600;
+}
+
+.prose a:hover {
+  color: var(--link-hover);
+}
+
+.prose code {
+  font-size: 0.86em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  border: 1px solid var(--border-soft);
+  background: var(--card);
+}
+
+.back {
+  margin: 1.75rem 0 0;
+  font-size: 0.9rem;
+}
+
+.back a {
+  color: var(--link);
+  font-weight: 700;
+}

@@ -12,6 +12,8 @@ export function WebpayReturn() {
   const tokenWs = q.get("token_ws") || "";
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "fail">("idle");
   const [msg, setMsg] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<number | null>(null);
+  const [boletaUrl, setBoletaUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!tokenWs) {
@@ -33,8 +35,23 @@ export function WebpayReturn() {
       })
       .then((j) => {
         if (j.approved) {
-          setStatus("ok");
-          setMsg(`Pago aprobado. Orden #${j.orderId}.`);
+          if (j.inventoryApplied === false && (j.inventoryWarning || j.stockMessage)) {
+            setStatus("fail");
+            setMsg(
+              `Pago recibido, pero el stock ya no estaba disponible: ${j.stockMessage || j.inventoryWarning}. Contáctanos para resolver tu orden #${j.orderId}.`
+            );
+          } else {
+            setStatus("ok");
+            setOrderId(typeof j.orderId === "number" ? j.orderId : null);
+            setBoletaUrl(
+              typeof j.boletaUrl === "string"
+                ? j.boletaUrl
+                : j.orderId
+                  ? `/api/store/orders/${j.orderId}/boleta`
+                  : null
+            );
+            setMsg(`Pago aprobado. Venta #${j.orderId}.`);
+          }
         } else {
           setStatus("fail");
           setMsg("Pago rechazado o anulado.");
@@ -47,12 +64,37 @@ export function WebpayReturn() {
   }, [tokenWs]);
 
   return (
-    <div className={styles.narrow}>
+    <div className={styles.narrow} style={status === "ok" ? { maxWidth: 520 } : undefined}>
       <h1 className={styles.pageTitle}>{status === "ok" ? "¡Gracias por tu compra!" : "Pago Webpay"}</h1>
       {status === "loading" ? <p className={styles.muted}>Confirmando pago…</p> : null}
       {msg ? <p className={status === "ok" ? styles.banner : styles.error}>{msg}</p> : null}
+
+      {status === "ok" && boletaUrl ? (
+        <div
+          style={{
+            margin: "0.75rem 0 0.25rem",
+            borderRadius: 10,
+            overflow: "hidden",
+            border: "1px solid var(--border-soft)",
+            background: "#f4f4f8",
+          }}
+        >
+          <iframe
+            title="Boleta de venta"
+            src={boletaUrl}
+            style={{
+              display: "block",
+              width: "100%",
+              minHeight: 560,
+              border: 0,
+              background: "#f4f4f8",
+            }}
+          />
+        </div>
+      ) : null}
+
       {status === "ok" ? (
-        <div style={{ display: "grid", placeItems: "center", margin: "0.5rem 0 1rem" }}>
+        <div style={{ display: "grid", placeItems: "center", margin: "0.25rem 0 1rem" }}>
           <img
             src="/mascot-hero.png"
             alt="Mascota Plasma Store"
@@ -66,15 +108,21 @@ export function WebpayReturn() {
           />
         </div>
       ) : null}
+
       <div className={styles.heroActions} style={{ justifyContent: "flex-start" }}>
         <Link className={styles.btnPrimary} to="/catalogo">
           Volver al catálogo
         </Link>
-        <Link className={styles.btnGhost} to="/carrito">
-          Ver carrito
-        </Link>
+        {orderId ? (
+          <Link className={styles.btnGhost} to="/perfil">
+            Mis compras
+          </Link>
+        ) : (
+          <Link className={styles.btnGhost} to="/carrito">
+            Ver carrito
+          </Link>
+        )}
       </div>
     </div>
   );
 }
-

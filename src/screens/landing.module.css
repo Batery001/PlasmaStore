@@ -15,11 +15,10 @@
   z-index: -2;
   pointer-events: none;
   background-color: #030510;
-  background-image: url("/landing-panel-bg.png");
+  background-image: url("/landing-panel-bg.webp");
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
-  animation: drift 28s ease-in-out infinite alternate;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -32,32 +31,40 @@
   position: absolute;
   left: 50%;
   top: 42%;
-  width: 160vmax;
-  height: 160vmax;
-  margin-left: -80vmax;
-  margin-top: -80vmax;
+  width: 120vmax;
+  height: 120vmax;
+  margin-left: -60vmax;
+  margin-top: -60vmax;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.28;
+  opacity: 0.18;
   background: conic-gradient(
     from 0deg at 50% 50%,
     transparent 0deg,
-    rgba(56, 189, 248, 0.14) 48deg,
-    rgba(139, 92, 246, 0.1) 95deg,
+    rgba(56, 189, 248, 0.12) 48deg,
+    rgba(139, 92, 246, 0.08) 95deg,
     transparent 125deg,
-    rgba(99, 102, 241, 0.14) 168deg,
+    rgba(99, 102, 241, 0.1) 168deg,
     transparent 215deg,
-    rgba(14, 165, 233, 0.12) 268deg,
-    rgba(167, 139, 250, 0.08) 310deg,
+    rgba(14, 165, 233, 0.1) 268deg,
     transparent 360deg
   );
-  animation: swirl 90s linear infinite;
+  /* Sin animación continua: ahorra GPU en toda la sesión */
+  will-change: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .cosmicSwirl {
     animation: none;
-    opacity: 0.15;
+    opacity: 0.12;
+  }
+}
+
+@media (max-width: 720px) {
+  .cosmicSwirl,
+  .fxLayer,
+  .starfield {
+    display: none;
   }
 }
 
@@ -127,10 +134,9 @@
     rgba(99, 102, 241, 0.45) 78%,
     transparent 100%
   );
-  opacity: 0.58;
-  filter: blur(0.5px);
-  box-shadow: 0 0 20px rgba(56, 189, 248, 0.85), 0 0 36px rgba(139, 92, 246, 0.25);
-  animation: flicker 4.5s ease-in-out infinite;
+  opacity: 0.5;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
+  animation: none;
 }
 
 .bolt {
@@ -439,21 +445,19 @@
 .mascotWrap::after {
   content: "";
   position: absolute;
-  width: min(100%, 400px);
-  height: min(100%, 400px);
+  width: min(100%, 360px);
+  height: min(100%, 360px);
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.45) 0%, rgba(59, 130, 246, 0.12) 42%, transparent 68%);
-  filter: blur(10px);
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.35) 0%, rgba(59, 130, 246, 0.1) 42%, transparent 68%);
   z-index: 0;
   pointer-events: none;
 }
 
-/* Fondo claro del PNG: multiply; halo teal tipo “rim light” alrededor del recorte. */
+/* Halo más liviano (un solo glow en vez de 6 drop-shadows). */
 .mascotOuter {
   position: relative;
   z-index: 1;
-  filter: drop-shadow(0 0 0.5px rgba(45, 212, 191, 0.95)) drop-shadow(0 0 3px rgba(34, 211, 238, 0.85)) drop-shadow(0 0 14px rgba(20, 184, 166, 0.55))
-    drop-shadow(0 0 28px rgba(56, 189, 248, 0.35)) drop-shadow(0 0 48px rgba(139, 92, 246, 0.15)) drop-shadow(0 16px 40px rgba(0, 0, 0, 0.55));
+  filter: drop-shadow(0 0 18px rgba(34, 211, 238, 0.45)) drop-shadow(0 14px 28px rgba(0, 0, 0, 0.5));
 }
 
 .mascot {
@@ -463,10 +467,7 @@
   height: auto;
   max-height: min(62vh, 680px);
   object-fit: contain;
-  /* Evita que el personaje “ensucie”/opaque el fondo con blending */
   mix-blend-mode: normal;
-  filter: contrast(1.06) brightness(1.08) saturate(1.12);
-  /* Marca IA en PNG esquina inferior izquierda */
   clip-path: polygon(0 0, 100% 0, 100% 100%, 58% 100%, 0 86%, 0 0);
 }
 
@@ -517,10 +518,8 @@
   grid-column: 1 / -1;
   border-radius: 22px;
   padding: 1.15rem 1.05rem 1.25rem;
-  background: linear-gradient(165deg, rgba(30, 27, 75, 0.18) 0%, rgba(2, 6, 23, 0.55) 100%);
+  background: rgba(8, 12, 32, 0.92);
   border: 1px solid rgba(125, 211, 252, 0.28);
-  backdrop-filter: blur(18px) saturate(1.15);
-  -webkit-backdrop-filter: blur(18px) saturate(1.15);
   box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.06) inset, 0 0 0 1px rgba(139, 92, 246, 0.05) inset,
     0 18px 52px rgba(0, 0, 0, 0.48);
 }
@@ -574,7 +573,6 @@
 .sealedTrack {
   display: flex;
   gap: 14px;
-  will-change: transform;
   transition: transform 260ms ease;
 }
 
@@ -716,10 +714,8 @@
 .card {
   border-radius: 22px;
   padding: 1.15rem 1.05rem 1.25rem;
-  background: linear-gradient(165deg, rgba(30, 27, 75, 0.18) 0%, rgba(2, 6, 23, 0.55) 100%);
+  background: rgba(8, 12, 32, 0.92);
   border: 1px solid rgba(125, 211, 252, 0.28);
-  backdrop-filter: blur(18px) saturate(1.15);
-  -webkit-backdrop-filter: blur(18px) saturate(1.15);
   text-decoration: none;
   color: inherit;
   box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.06) inset, 0 0 0 1px rgba(139, 92, 246, 0.05) inset, 0 0 28px rgba(56, 189, 248, 0.1),
@@ -735,8 +731,25 @@
 }
 
 .cardHero .cardVisual,
-.cardHero .cardVisualStar {
+.cardHero .cardVisualStar,
+.cardHero .cardHeroPhoto {
   height: 132px;
+}
+
+.cardHeroPhoto {
+  border-radius: 14px;
+  height: 132px;
+  margin-bottom: 0.7rem;
+  overflow: hidden;
+  background: #020617;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 24px rgba(56, 189, 248, 0.12);
+}
+
+.cardHeroPhoto img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .cardCompact .cardVisual {
@@ -844,6 +857,29 @@
   margin: 2.25rem auto 0;
   padding: 1.1rem 1.1rem 0;
   border-top: 1px solid rgba(51, 65, 85, 0.55);
+}
+
+.aboutBand {
+  max-width: 720px;
+  margin: 2.5rem auto 0;
+  padding: 0 1.25rem;
+  text-align: center;
+}
+
+.aboutTitle {
+  margin: 0 0 0.65rem;
+  font-size: clamp(1.25rem, 2.5vw, 1.55rem);
+  font-weight: 700;
+  color: #e2e8f0;
+  letter-spacing: 0.02em;
+}
+
+.aboutBody {
+  margin: 0;
+  color: #94a3b8;
+  line-height: 1.65;
+  font-size: 0.98rem;
+  white-space: pre-wrap;
 }
 
 .socialRow {

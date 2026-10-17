@@ -5,16 +5,15 @@ import { fileURLToPath } from "node:url";
 import cors from "cors";
 import express from "express";
 import { FRONTEND_ORIGIN } from "./config.mjs";
-import { ensureIndexes, getDb } from "./mongo.mjs";
+import { ensureIndexes, getDb } from "./db.mjs";
 import { mountStoreRoutes } from "./storeRoutes.mjs";
-import { mountTournamentRoutes } from "./tournamentRoutes.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadRoot = path.join(__dirname, "..", "data", "store-uploads");
 
 let initPromise = null;
 
-/** Inicializa Mongo una sola vez por instancia (local o serverless). Si falla, se puede reintentar en la siguiente petición. */
+/** Inicializa DB una sola vez por instancia (SQLite local o Mongo). Si falla, se puede reintentar. */
 export function ensureServerReady() {
   if (!initPromise) {
     initPromise = (async () => {
@@ -100,7 +99,7 @@ export function createApp() {
 
   app.use((req, res, next) => {
     const pathOnly = String(req.path || "").split("?")[0];
-    /** Liveness sin Mongo (el handler no usa BD). */
+    /** Liveness sin DB (el handler no usa BD). */
     if (pathOnly === "/api/health") return next();
     ensureServerReady()
       .then(() => next())
@@ -120,7 +119,10 @@ export function createApp() {
   app.use("/store-media", express.static(uploadRoot));
 
   mountStoreRoutes(app, { getDb, uploadRoot });
-  mountTournamentRoutes(app, { getDb });
+
+  app.get("/api/health", (_req, res) => {
+    res.json({ ok: true, service: "plasma-store" });
+  });
 
   app.use((err, _req, res, _next) => {
     console.error(err);

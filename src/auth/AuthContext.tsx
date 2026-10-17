@@ -20,6 +20,8 @@ export type StoreUser = {
   birth_day?: number | null;
   birth_month?: number | null;
   birth_year?: number | null;
+  rut?: string | null;
+  email_verified?: boolean;
 };
 
 type AuthState = {

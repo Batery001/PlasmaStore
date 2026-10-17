@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { formatCLP } from "../lib/money";
 import { parseResponseJson } from "../lib/parseResponseJson";
 import { useAuth } from "../auth/AuthContext";
+import { notifyCartChanged } from "../lib/cartEvents";
 import styles from "./pages.module.css";
 
 type Line = {
@@ -10,13 +11,15 @@ type Line = {
   quantity: number;
   name: string;
   price_cents: number;
+  line_total_cents?: number;
   stock: number;
+  image_url?: string | null;
 };
 
 export function Cart() {
   const { user, loading } = useAuth();
+  const navigate = useNavigate();
   const [items, setItems] = useState<Line[]>([]);
-  const [msg, setMsg] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -33,9 +36,9 @@ export function Cart() {
   }, []);
 
   useEffect(() => {
-    if (!loading && user) reload();
-    if (!loading && !user) setItems([]);
-  }, [user, loading, reload]);
+    if (loading) return;
+    reload();
+  }, [loading, reload]);
 
   async function setQty(productId: number, quantity: number) {
     await fetch("/api/store/cart", {
@@ -45,31 +48,34 @@ export function Cart() {
       body: JSON.stringify({ productId, quantity }),
     });
     reload();
+    notifyCartChanged();
   }
 
   async function removeLine(productId: number) {
     await fetch(`/api/store/cart/${productId}`, { method: "DELETE", credentials: "include" });
     reload();
+    notifyCartChanged();
   }
+
+  const subtotal = useMemo(
+    () => items.reduce((s, i) => s + (typeof i.line_total_cents === "number" ? i.line_total_cents : i.price_cents * i.quantity), 0),
+    [items]
+  );
 
   if (loading) return <p className={styles.muted}>Cargando…</p>;
-  if (!user) {
-    return (
-      <div className={styles.narrow}>
-        <h1 className={styles.pageTitle}>Carrito</h1>
-        <p className={styles.muted}>
-          <Link to="/login">Inicia sesión</Link> para ver tu carrito.
-        </p>
-      </div>
-    );
-  }
-
-  const total = items.reduce((s, i) => s + i.price_cents * i.quantity, 0);
 
   return (
     <div>
-      <h1 className={styles.pageTitle}>Carrito</h1>
-      {msg ? <p className={styles.banner}>{msg}</p> : null}
+      <p className={styles.checkoutSteps}>
+        <span className={styles.checkoutStepOn}>1. Carrito</span>
+        <span className={styles.checkoutStepMuted}>2. Entrega y pago</span>
+      </p>
+      <h1 className={styles.pageTitle}>Tu carrito</h1>
+      {!user ? (
+        <p className={styles.muted}>
+          Compra como invitado o <Link to="/login">inicia sesión</Link> / <Link to="/registro">regístrate</Link>.
+        </p>
+      ) : null}
       {items.length === 0 ? (
         <p className={styles.muted}>
           Vacío. <Link to="/catalogo">Seguir comprando</Link>
@@ -78,10 +84,19 @@ export function Cart() {
         <>
           <ul className={styles.cartList}>
             {items.map((i) => (
-              <li key={i.productId} className={styles.cartRow}>
+              <li key={i.productId} className={styles.cartRowReview}>
+                {i.image_url ? (
+                  <img className={styles.cartThumb} src={i.image_url} alt="" />
+                ) : (
+                  <div className={styles.cartThumbFallback} aria-hidden />
+                )}
                 <div>
-                  <strong>{i.name}</strong>
-                  <div className={styles.muted}>{formatCLP(i.price_cents)} c/u · máx. stock {i.stock}</div>
+                  <strong>
+                    <Link to={`/producto/${i.productId}`}>{i.name}</Link>
+                  </strong>
+                  <div className={styles.muted}>
+                    {formatCLP(i.price_cents)} c/u · máx. stock {i.stock}
+                  </div>
                 </div>
                 <div className={styles.qtyRow}>
                   <input
@@ -99,48 +114,30 @@ export function Cart() {
                     Quitar
                   </button>
                 </div>
-                <div className={styles.lineTotal}>{formatCLP(i.price_cents * i.quantity)}</div>
+                <div className={styles.lineTotal}>
+                  {formatCLP(typeof i.line_total_cents === "number" ? i.line_total_cents : i.price_cents * i.quantity)}
+                </div>
               </li>
             ))}
           </ul>
-          <p className={styles.total}>
-            Total estimado (CLP): <strong>{formatCLP(total)}</strong>
-          </p>
-          <p className={styles.muted}>
-            Todos los montos están en pesos chilenos (CLP). Demo: sin pasarela de pago.
-          </p>
-          <div className={styles.heroActions} style={{ justifyContent: "flex-start" }}>
-            <button
-              type="button"
-              className={styles.btnPrimary}
-              onClick={async () => {
-                setMsg(null);
-                try {
-                  const r = await fetch("/api/store/checkout/webpay/create", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({}),
-                  });
-                  const j = await r.json().catch(() => ({}));
-                  if (!r.ok || !j.ok) throw new Error(j.error || "No se pudo iniciar Webpay.");
-                  const form = document.createElement("form");
-                  form.method = "POST";
-                  form.action = j.url;
-                  const input = document.createElement("input");
-                  input.type = "hidden";
-                  input.name = "token_ws";
-                  input.value = j.token;
-                  form.appendChild(input);
-                  document.body.appendChild(form);
-                  form.submit();
-                } catch (e) {
-                  setMsg(e instanceof Error ? e.message : "Error iniciando pago.");
-                }
-              }}
-            >
-              Pagar con Webpay
+
+          <div className={styles.totalsBox}>
+            <div className={`${styles.totalsRow} ${styles.totalsGrand}`}>
+              <span>Subtotal</span>
+              <strong>{formatCLP(subtotal)}</strong>
+            </div>
+            <p className={styles.muted} style={{ margin: "0.4rem 0 0" }}>
+              El envío y el pago se confirman en el siguiente paso.
+            </p>
+          </div>
+
+          <div className={styles.heroActions} style={{ justifyContent: "flex-start", flexWrap: "wrap" }}>
+            <button type="button" className={styles.btnPrimary} onClick={() => navigate("/checkout")}>
+              Confirmar y continuar
             </button>
+            <Link className={styles.btnGhost} to="/catalogo">
+              Seguir comprando
+            </Link>
           </div>
         </>
       )}

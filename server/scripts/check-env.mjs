@@ -1,31 +1,37 @@
 /**
- * Comprueba que las variables mínimas existan (sin conectar a Mongo).
- * Uso: npm run check-env  (desde la raíz _plasma_upload)
+ * Comprueba variables mínimas según el driver (SQLite local o Mongo).
+ * Uso: npm run check-env
  */
 import { loadProjectEnv } from "../src/loadProjectEnv.mjs";
 
 loadProjectEnv();
 
-const required = ["MONGODB_URI", "APP_SESSION_SECRET"];
-const missing = required.filter((k) => !process.env[k] || !String(process.env[k]).trim());
+const driver = String(process.env.DB_DRIVER || "").trim().toLowerCase() || (process.env.MONGODB_URI ? "mongo" : "sqlite");
+const effective = driver === "sql" ? "sqlite" : driver === "mongo" ? "mongo" : "sqlite";
 
-if (missing.length) {
-  console.error("[check-env] Faltan variables:", missing.join(", "));
-  console.error("Copia .env.example → .env.local en la raíz del proyecto y rellénalas.");
+const secret = process.env.APP_SESSION_SECRET ? String(process.env.APP_SESSION_SECRET).trim() : "";
+if (!secret) {
+  console.error("[check-env] Falta APP_SESSION_SECRET.");
+  console.error("Copia .env.example → .env.local y rellénalo.");
   process.exit(1);
 }
-
-const uri = String(process.env.MONGODB_URI);
-if (!uri.startsWith("mongodb://") && !uri.startsWith("mongodb+srv://")) {
-  console.error("[check-env] MONGODB_URI no parece un URI de MongoDB.");
-  process.exit(1);
+if (secret.length < 16) {
+  console.warn("[check-env] Aviso: APP_SESSION_SECRET conviene que sea más largo.");
 }
 
-const secret = String(process.env.APP_SESSION_SECRET);
-if (secret.length < 32) {
-  console.warn("[check-env] Aviso: APP_SESSION_SECRET conviene que tenga al menos 32 caracteres.");
+if (effective === "mongo") {
+  const uri = process.env.MONGODB_URI ? String(process.env.MONGODB_URI).trim() : "";
+  if (!uri) {
+    console.error("[check-env] DB_DRIVER=mongo pero falta MONGODB_URI.");
+    process.exit(1);
+  }
+  if (!uri.startsWith("mongodb://") && !uri.startsWith("mongodb+srv://")) {
+    console.error("[check-env] MONGODB_URI no parece un URI de MongoDB.");
+    process.exit(1);
+  }
+  console.log("[check-env] OK · driver=mongo · db=", process.env.MONGODB_DB?.trim() || "plasmastore");
+} else {
+  console.log("[check-env] OK · driver=sqlite · archivo=server/data/local.sqlite (o SQLITE_PATH)");
 }
 
-console.log("[check-env] OK: MONGODB_URI y APP_SESSION_SECRET están definidas.");
-console.log("[check-env] Base de datos:", process.env.MONGODB_DB?.trim() || "plasmastore (por defecto)");
 process.exit(0);

@@ -10,7 +10,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 const { loadProjectEnv } = await import("../src/loadProjectEnv.mjs");
 loadProjectEnv(root);
 
-const { getDb } = await import("../src/mongo.mjs");
+const { getDb } = await import("../src/db.mjs");
 
 const email = (process.env.ADMIN_EMAIL || "").trim().toLowerCase();
 const password = process.env.ADMIN_PASSWORD || "";
