@@ -26,6 +26,8 @@ export async function register() {
 
   // Precalienta sql.js / índices en background (no bloquea el boot de Next).
   try {
+    // El servidor Express está en .mjs fuera del tsconfig de Next.
+    // @ts-expect-error JS module without type declarations
     const { ensureServerReady } = await import("../../server/src/app.mjs");
     void ensureServerReady().catch((e: unknown) => {
       console.warn("[boot] DB warmup:", e instanceof Error ? e.message : e);
