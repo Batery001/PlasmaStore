@@ -3,25 +3,13 @@ import { parseResponseJson } from "../lib/parseResponseJson";
 import adminStyles from "../admin/admin.module.css";
 
 type PaymentsView = {
-  mode: "mock" | "integration" | "production";
-  commerce_code: string;
-  api_key_masked: string;
-  api_key_set: boolean;
   public_base_url: string;
-  ready_for_live: boolean;
   tuu_enabled?: boolean;
   tuu_mode?: "integration" | "production";
   tuu_account_id?: string;
   tuu_secret_masked?: string;
   tuu_secret_set?: boolean;
   tuu_ready_for_live?: boolean;
-  source?: string;
-  checklist?: {
-    mode_set: boolean;
-    commerce_code: boolean;
-    api_key: boolean;
-    public_base_url: boolean;
-  };
 };
 
 export function AdminPayments() {
@@ -29,13 +17,7 @@ export function AdminPayments() {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-  const [mode, setMode] = useState<"mock" | "integration" | "production">("mock");
-  const [commerceCode, setCommerceCode] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [apiKeySet, setApiKeySet] = useState(false);
-  const [apiKeyMasked, setApiKeyMasked] = useState("");
   const [publicBaseUrl, setPublicBaseUrl] = useState("");
-  const [ready, setReady] = useState(false);
   const [tuuEnabled, setTuuEnabled] = useState(true);
   const [tuuMode, setTuuMode] = useState<"integration" | "production">("integration");
   const [tuuAccountId, setTuuAccountId] = useState("");
@@ -44,6 +26,17 @@ export function AdminPayments() {
   const [tuuSecretMasked, setTuuSecretMasked] = useState("");
   const [tuuReady, setTuuReady] = useState(false);
 
+  function applyPayments(p: PaymentsView) {
+    setPublicBaseUrl(p.public_base_url || "");
+    setTuuEnabled(p.tuu_enabled !== false);
+    setTuuMode(p.tuu_mode === "production" ? "production" : "integration");
+    setTuuAccountId(p.tuu_account_id || "");
+    setTuuSecret("");
+    setTuuSecretSet(Boolean(p.tuu_secret_set));
+    setTuuSecretMasked(p.tuu_secret_masked || "");
+    setTuuReady(Boolean(p.tuu_ready_for_live));
+  }
+
   async function reload() {
     setLoading(true);
     setErr(null);
@@ -51,21 +44,7 @@ export function AdminPayments() {
       const res = await fetch("/api/store/admin/payments", { credentials: "include" });
       const data = await parseResponseJson<{ error?: string; payments?: PaymentsView }>(res);
       if (!res.ok || !data.payments) throw new Error(data.error || "No se pudo cargar la config.");
-      const p = data.payments;
-      setMode(p.mode === "production" || p.mode === "integration" ? p.mode : "mock");
-      setCommerceCode(p.commerce_code || "");
-      setApiKey("");
-      setApiKeySet(Boolean(p.api_key_set));
-      setApiKeyMasked(p.api_key_masked || "");
-      setPublicBaseUrl(p.public_base_url || "");
-      setReady(Boolean(p.ready_for_live));
-      setTuuEnabled(p.tuu_enabled !== false);
-      setTuuMode(p.tuu_mode === "production" ? "production" : "integration");
-      setTuuAccountId(p.tuu_account_id || "");
-      setTuuSecret("");
-      setTuuSecretSet(Boolean(p.tuu_secret_set));
-      setTuuSecretMasked(p.tuu_secret_masked || "");
-      setTuuReady(Boolean(p.tuu_ready_for_live));
+      applyPayments(data.payments);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Error al cargar.");
     } finally {
@@ -86,14 +65,11 @@ export function AdminPayments() {
     setMsg(null);
     try {
       const body: Record<string, string | boolean> = {
-        mode,
-        commerce_code: commerceCode.trim(),
         public_base_url: publicBaseUrl.trim(),
         tuu_enabled: tuuEnabled,
         tuu_mode: tuuMode,
         tuu_account_id: tuuAccountId.trim(),
       };
-      if (apiKey.trim()) body.api_key = apiKey.trim();
       if (tuuSecret.trim()) body.tuu_secret = tuuSecret.trim();
 
       const res = await fetch("/api/store/admin/payments", {
@@ -105,22 +81,7 @@ export function AdminPayments() {
       const data = await parseResponseJson<{ error?: string; message?: string; payments?: PaymentsView }>(res);
       if (!res.ok) throw new Error(data.error || "No se pudo guardar.");
       setMsg(data.message || "Guardado.");
-      if (data.payments) {
-        setMode(data.payments.mode === "production" || data.payments.mode === "integration" ? data.payments.mode : "mock");
-        setCommerceCode(data.payments.commerce_code || "");
-        setApiKey("");
-        setApiKeySet(Boolean(data.payments.api_key_set));
-        setApiKeyMasked(data.payments.api_key_masked || "");
-        setPublicBaseUrl(data.payments.public_base_url || "");
-        setReady(Boolean(data.payments.ready_for_live));
-        setTuuEnabled(data.payments.tuu_enabled !== false);
-        setTuuMode(data.payments.tuu_mode === "production" ? "production" : "integration");
-        setTuuAccountId(data.payments.tuu_account_id || "");
-        setTuuSecret("");
-        setTuuSecretSet(Boolean(data.payments.tuu_secret_set));
-        setTuuSecretMasked(data.payments.tuu_secret_masked || "");
-        setTuuReady(Boolean(data.payments.tuu_ready_for_live));
-      }
+      if (data.payments) applyPayments(data.payments);
     } catch (ex) {
       setErr(ex instanceof Error ? ex.message : "Error al guardar.");
     } finally {
@@ -132,7 +93,7 @@ export function AdminPayments() {
     <div>
       <h1 className={adminStyles.pageTitle}>Sistema de pago</h1>
       <p className={adminStyles.muted}>
-        Webpay Plus (Transbank) y TUU Pago Online. TUU se puede probar ahora con el ambiente de integración; el secret real se pega cuando TUU te lo entregue.
+        El checkout cobra solo con TUU Pago Online. El secret real se pega cuando TUU te lo entregue.
       </p>
 
       {loading ? <p className={adminStyles.muted}>Cargando…</p> : null}
@@ -144,83 +105,6 @@ export function AdminPayments() {
           <div
             className={adminStyles.banner}
             style={{
-              background: ready ? "rgba(34, 197, 94, 0.12)" : "rgba(234, 179, 8, 0.12)",
-              borderColor: ready ? "rgba(34, 197, 94, 0.35)" : "rgba(234, 179, 8, 0.35)",
-            }}
-          >
-            {ready
-              ? "Listo para cobrar en vivo: modo producción + código + API Key."
-              : "Aún no está listo para producción. Completa los datos abajo cuando Transbank te entregue las claves."}
-          </div>
-
-          <label className={adminStyles.label}>
-            Modo
-            <select
-              className={adminStyles.input}
-              value={mode}
-              onChange={(e) => {
-                const v = e.target.value;
-                setMode(v === "production" ? "production" : v === "integration" ? "integration" : "mock");
-              }}
-            >
-              <option value="mock">Simulación (local, sin Transbank)</option>
-              <option value="integration">Integración / pruebas Transbank</option>
-              <option value="production">Producción (claves reales)</option>
-            </select>
-          </label>
-
-          <div className={adminStyles.formGrid} style={{ marginTop: "0.75rem" }}>
-            <label className={adminStyles.label}>
-              Código de comercio
-              <input
-                className={adminStyles.input}
-                value={commerceCode}
-                onChange={(e) => setCommerceCode(e.target.value)}
-                placeholder="Ej. 5970XXXXXXXX"
-                autoComplete="off"
-                disabled={mode !== "production"}
-              />
-              <span className={adminStyles.muted} style={{ display: "block", marginTop: "0.25rem" }}>
-                Obligatorio en producción. En integración se usan las claves de prueba de Transbank.
-              </span>
-            </label>
-
-            <label className={adminStyles.label}>
-              API Key (clave secreta)
-              <input
-                className={adminStyles.input}
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={apiKeySet ? `Guardada: ${apiKeyMasked}` : "Pega tu API Key de Transbank"}
-                autoComplete="new-password"
-                disabled={mode !== "production"}
-              />
-              <span className={adminStyles.muted} style={{ display: "block", marginTop: "0.25rem" }}>
-                Déjala vacía al guardar si no quieres cambiar la clave ya guardada.
-              </span>
-            </label>
-          </div>
-
-          <label className={adminStyles.label} style={{ marginTop: "0.75rem" }}>
-            URL pública del sitio
-            <input
-              className={adminStyles.input}
-              value={publicBaseUrl}
-              onChange={(e) => setPublicBaseUrl(e.target.value)}
-              placeholder="https://tudominio.cl"
-              autoComplete="off"
-            />
-            <span className={adminStyles.muted} style={{ display: "block", marginTop: "0.25rem" }}>
-              Debe ser la URL real con la que Transbank vuelve del pago (importante en producción). En local:{" "}
-              <code>http://localhost:3000</code>
-            </span>
-          </label>
-
-          <div
-            className={adminStyles.banner}
-            style={{
-              marginTop: "1.25rem",
               background: tuuReady ? "rgba(34, 197, 94, 0.12)" : "rgba(59, 130, 246, 0.12)",
               borderColor: tuuReady ? "rgba(34, 197, 94, 0.35)" : "rgba(59, 130, 246, 0.35)",
             }}
@@ -232,7 +116,21 @@ export function AdminPayments() {
 
           <label className={adminStyles.label} style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
             <input type="checkbox" checked={tuuEnabled} onChange={(e) => setTuuEnabled(e.target.checked)} />
-            <span>Mostrar «Pagar con TUU» en el carrito</span>
+            <span>Habilitar el botón Pagar (TUU) en el checkout</span>
+          </label>
+
+          <label className={adminStyles.label} style={{ marginTop: "0.75rem" }}>
+            URL pública del sitio
+            <input
+              className={adminStyles.input}
+              value={publicBaseUrl}
+              onChange={(e) => setPublicBaseUrl(e.target.value)}
+              placeholder="https://plasmastoretcg.cl"
+              autoComplete="off"
+            />
+            <span className={adminStyles.muted} style={{ display: "block", marginTop: "0.25rem" }}>
+              URL con la que TUU vuelve del pago. En local: <code>http://localhost:3000</code>
+            </span>
           </label>
 
           <label className={adminStyles.label} style={{ marginTop: "0.75rem" }}>
@@ -279,11 +177,9 @@ export function AdminPayments() {
               Checklist para salir a producción
             </div>
             <ul className={adminStyles.muted} style={{ margin: 0, paddingLeft: "1.2rem", lineHeight: 1.6 }}>
-              <li>Cuenta comercio Webpay Plus en Transbank</li>
-              <li>Código de comercio + API Key de producción</li>
-              <li>URL pública HTTPS del sitio</li>
-              <li>Modo = Producción y Guardar</li>
-              <li>Probar un pago real de bajo monto y confirmar retorno a /webpay/return</li>
+              <li>URL pública HTTPS del sitio (https://plasmastoretcg.cl)</li>
+              <li>TUU en modo Producción con account_id y secret reales</li>
+              <li>Probar un pago de bajo monto y confirmar el retorno a /tuu/return</li>
             </ul>
           </div>
 

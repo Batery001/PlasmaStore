@@ -97,15 +97,13 @@ export function Checkout() {
   const shippingNow = method === "shipping" && chargeShippingOnline ? shippingFeeCents : 0;
   const total = subtotal + shippingNow;
 
-  function buildFulfillment(requirePhone: boolean) {
+  function buildFulfillment() {
     if (method === "shipping") {
       if (street.trim().length < 5) throw new Error("Indica la dirección de envío (calle y número).");
       if (!commune.trim()) throw new Error("Indica la comuna.");
       if (!region.trim()) throw new Error("Indica la región.");
-      if (phone.trim().length < 8) throw new Error("Indica un teléfono de contacto (mín. 8 dígitos).");
-    } else if (requirePhone && phone.trim().length < 8) {
-      throw new Error("TUU necesita un teléfono de contacto (mín. 8 dígitos).");
     }
+    if (phone.trim().length < 8) throw new Error("Indica un teléfono de contacto (mín. 8 dígitos).");
     if (!email.trim().includes("@")) throw new Error("Indica un email para el comprobante de pago.");
     if (!parseAndValidateRut(rut)) throw new Error("RUT inválido. Usa el formato 12.345.678-9.");
     if (!termsOk) throw new Error("Debes aceptar los términos y la política de privacidad.");
@@ -140,56 +138,11 @@ export function Checkout() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function payWithWebpay() {
+  async function pay() {
     setMsg(null);
     setPaying(true);
     try {
-      const fulfillment = buildFulfillment(false);
-
-      const r = await fetch("/api/store/checkout/webpay/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ fulfillment, terms_accepted: true }),
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok || !j.ok) throw new Error(j.error || "No se pudo iniciar Webpay.");
-      if (!j.url || !j.token) throw new Error("Webpay no devolvió URL/token. Revisa las claves de integración.");
-
-      if (j.mock) {
-        window.location.href = j.url;
-        return;
-      }
-
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = j.url;
-      form.style.display = "none";
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = "token_ws";
-      input.value = j.token;
-      form.appendChild(input);
-      document.body.appendChild(form);
-      form.submit();
-      window.setTimeout(() => {
-        try {
-          form.remove();
-        } catch {
-          /* ignore */
-        }
-      }, 2000);
-    } catch (e) {
-      showPayError(e instanceof Error ? e.message : "Error iniciando pago.");
-      setPaying(false);
-    }
-  }
-
-  async function payWithTuu() {
-    setMsg(null);
-    setPaying(true);
-    try {
-      const fulfillment = buildFulfillment(true);
+      const fulfillment = buildFulfillment();
       const r = await fetch("/api/store/checkout/tuu/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -344,7 +297,7 @@ export function Checkout() {
             <input className={styles.input} value={recipient} onChange={(e) => setRecipient(e.target.value)} />
           </label>
           <label className={styles.label}>
-            Teléfono {method === "shipping" || tuuEnabled ? "(obligatorio para TUU / envío)" : "(opcional)"}
+            Teléfono (obligatorio)
             <input
               className={styles.input}
               value={phone}
@@ -395,27 +348,14 @@ export function Checkout() {
       </div>
 
       <div className={styles.heroActions} style={{ justifyContent: "flex-start", flexWrap: "wrap" }}>
-        {tuuEnabled ? (
-          <button
-            type="button"
-            className={styles.btnPrimary}
-            disabled={paying}
-            onClick={() => void payWithTuu()}
-          >
-            {paying ? "Redirigiendo…" : "Pagar con TUU"}
-          </button>
-        ) : null}
-        <button
-          type="button"
-          className={tuuEnabled ? styles.btnGhost : styles.btnPrimary}
-          disabled={paying}
-          onClick={() => void payWithWebpay()}
-        >
-          {paying ? "Redirigiendo…" : "Pagar con Webpay"}
+        <button type="button" className={styles.btnPrimary} disabled={paying || !tuuEnabled} onClick={() => void pay()}>
+          {paying ? "Redirigiendo…" : "Pagar"}
         </button>
       </div>
       <p className={styles.muted} style={{ marginTop: "0.35rem" }}>
-        Marca los términos, usa un RUT válido (el dígito verificador tiene que calzar) y un teléfono si pagas con TUU.
+        {tuuEnabled
+          ? "El pago se procesa con TUU. Marca los términos, usa un RUT válido y un teléfono de contacto."
+          : "El pago online no está habilitado. Revisa Admin → Sistema de pago (TUU)."}
       </p>
     </div>
   );
