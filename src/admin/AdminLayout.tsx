@@ -1,22 +1,45 @@
-import { NavLink, Outlet, Navigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, NavLink, Outlet, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { APP_VERSION_LABEL } from "../lib/appVersion";
+import { usePosPopup } from "../pos/PosPopupContext";
 import styles from "./admin.module.css";
 
 function routeLabel(pathname: string) {
   if (pathname.startsWith("/admin/productos")) return "Productos";
-  if (pathname.startsWith("/admin/singles")) return "Singles";
+  if (pathname.startsWith("/admin/sitio")) return "Sitio / redes";
+  if (pathname.startsWith("/admin/eventos")) return "Eventos";
   if (pathname.startsWith("/admin/etiquetas")) return "Etiquetas";
   if (pathname.startsWith("/admin/widgets")) return "Widgets";
   if (pathname.startsWith("/admin/carritos")) return "Carritos";
   if (pathname.startsWith("/admin/ordenes")) return "Órdenes";
-  if (pathname.startsWith("/admin/torneos-sprites")) return "Torneos · sprites y listas";
+  if (pathname.startsWith("/admin/pagos")) return "Sistema de pago";
+  if (pathname.startsWith("/admin/envio")) return "Envío / retiro";
+  if (pathname.startsWith("/admin/correo")) return "Correo";
+  if (pathname.startsWith("/admin/ops")) return "Operación";
   return "Panel de inicio";
 }
 
 export function AdminLayout() {
   const { user, loading, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const current = routeLabel(location.pathname);
+  const pos = usePosPopup();
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-shell", "admin");
+    return () => {
+      document.documentElement.removeAttribute("data-shell");
+    };
+  }, []);
+
+  useEffect(() => {
+    if (location.pathname.startsWith("/admin/venta")) {
+      pos.show();
+      navigate("/admin/panel", { replace: true });
+    }
+  }, [location.pathname, navigate, pos.show]);
 
   if (loading) {
     return (
@@ -39,9 +62,11 @@ export function AdminLayout() {
   return (
     <div className={styles.root}>
       <aside className={styles.sidebar}>
-        <div className={styles.brand}>Plasma Store</div>
-        <div className={styles.subbrand}>Panel de administración</div>
-        <nav className={styles.nav}>
+        <div className={styles.brandBlock}>
+          <div className={styles.brand}>Plasma Store</div>
+          <div className={styles.subbrand}>Administración</div>
+        </div>
+        <nav className={styles.nav} aria-label="Menú administración">
           <div className={styles.navSection}>General</div>
           <NavLink
             to="/admin/panel"
@@ -50,7 +75,7 @@ export function AdminLayout() {
               isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
             }
           >
-            <span className={styles.navIcon}>🏠</span> Panel de inicio
+            Panel
           </NavLink>
           <div className={styles.navSection}>Catálogo</div>
           <NavLink
@@ -59,15 +84,23 @@ export function AdminLayout() {
               isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
             }
           >
-            <span className={styles.navIcon}>🛒</span> Productos
+            Productos
           </NavLink>
           <NavLink
-            to="/admin/singles"
+            to="/admin/sitio"
             className={({ isActive }) =>
               isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
             }
           >
-            <span className={styles.navIcon}>🃏</span> Singles
+            Sitio / redes
+          </NavLink>
+          <NavLink
+            to="/admin/eventos"
+            className={({ isActive }) =>
+              isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
+            }
+          >
+            Eventos
           </NavLink>
           <NavLink
             to="/admin/etiquetas"
@@ -75,7 +108,7 @@ export function AdminLayout() {
               isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
             }
           >
-            <span className={styles.navIcon}>🏷️</span> Etiquetas
+            Etiquetas
           </NavLink>
           <NavLink
             to="/admin/widgets"
@@ -83,16 +116,24 @@ export function AdminLayout() {
               isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
             }
           >
-            <span className={styles.navIcon}>🧩</span> Widgets
+            Widgets
           </NavLink>
           <div className={styles.navSection}>Ventas</div>
+          <button
+            type="button"
+            className={pos.open ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem}
+            onClick={() => pos.show()}
+            style={{ width: "100%", textAlign: "left", cursor: "pointer", border: "none", background: "transparent" }}
+          >
+            POS
+          </button>
           <NavLink
             to="/admin/carritos"
             className={({ isActive }) =>
               isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
             }
           >
-            <span className={styles.navIcon}>🧺</span> Carritos activos
+            Carritos activos
           </NavLink>
           <NavLink
             to="/admin/ordenes"
@@ -100,42 +141,76 @@ export function AdminLayout() {
               isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
             }
           >
-            <span className={styles.navIcon}>📦</span> Órdenes
+            Órdenes
           </NavLink>
-          <div className={styles.navSection}>Torneos</div>
+          <div className={styles.navSection}>Sistema</div>
           <NavLink
-            to="/admin/torneos-sprites"
+            to="/admin/pagos"
             className={({ isActive }) =>
               isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
             }
           >
-            <span className={styles.navIcon}>🏆</span> Sprites y listas
+            Sistema de pago
+          </NavLink>
+          <NavLink
+            to="/admin/envio"
+            className={({ isActive }) =>
+              isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
+            }
+          >
+            Envío / retiro
+          </NavLink>
+          <NavLink
+            to="/admin/correo"
+            className={({ isActive }) =>
+              isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
+            }
+          >
+            Correo
+          </NavLink>
+          <NavLink
+            to="/admin/ops"
+            className={({ isActive }) =>
+              isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
+            }
+          >
+            Operación / 2FA
           </NavLink>
         </nav>
         <div className={styles.sidebarFooter}>
-          <a href="/">← Volver a la tienda</a>
+          <button type="button" className={styles.linkbtnAccent} onClick={() => pos.show()}>
+            POS
+          </button>
+          <Link to="/">Ver tienda</Link>
           <button type="button" className={styles.linkbtn} onClick={() => logout()}>
             Cerrar sesión
           </button>
+          <span className={styles.versionLabel}>{APP_VERSION_LABEL}</span>
         </div>
       </aside>
       <div className={styles.mainWrap}>
         <header className={styles.topbar}>
           <div className={styles.topbarInner}>
             <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-              <a className={styles.crumbLink} href="/admin/panel">
+              <Link className={styles.crumbLink} to="/admin/panel">
                 Dashboard
-              </a>
+              </Link>
               <span className={styles.crumbSep}>/</span>
               <span>{current}</span>
             </nav>
             <div className={styles.topbarRight}>
-              <span className={styles.topbarUser}>
-                {user.name} ({user.email})
+              <button type="button" className={styles.topbarBtn} onClick={() => pos.show()} title="Abrir POS">
+                POS
+              </button>
+              <span className={styles.topbarVersion} title="Versión">
+                {APP_VERSION_LABEL}
               </span>
-              <a className={styles.topbarBtn} href="/" title="Ver tienda">
+              <span className={styles.topbarUser}>
+                {user.name} · {user.email}
+              </span>
+              <Link className={styles.topbarBtn} to="/" title="Ver tienda">
                 Tienda
-              </a>
+              </Link>
               <button type="button" className={styles.topbarBtn} onClick={() => logout()}>
                 Salir
               </button>

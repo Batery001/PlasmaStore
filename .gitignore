@@ -34,3 +34,5 @@ server/.env
 # Uploads / runtime data (no commit)
 server/data/
 server/data/**
+*.sqlite
+*.sqlite-*

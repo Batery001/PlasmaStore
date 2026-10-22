@@ -75,3 +75,25 @@ export function clearSessionCookie() {
     maxAge: 0,
   });
 }
+
+/** Cookie de invitado (carrito sin cuenta). */
+export function readGuestId(req) {
+  const c = readCookies(req);
+  const g = String(c.ps_guest || "").trim();
+  if (/^[a-zA-Z0-9_-]{8,64}$/.test(g)) return g;
+  return null;
+}
+
+export function makeGuestCookie(guestId, maxAgeSeconds = 60 * 60 * 24 * 30) {
+  return serializeCookie("ps_guest", guestId, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: cookieSecure(),
+    path: "/",
+    maxAge: maxAgeSeconds,
+  });
+}
+
+export function newGuestId() {
+  return `g_${crypto.randomBytes(16).toString("hex")}`;
+}

@@ -19,8 +19,12 @@
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.12);
 }
 
+.brandBlock {
+  padding: 1rem 1.1rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 .brand {
-  padding: 1rem 1.1rem 0.25rem;
   font-size: 1.05rem;
   font-weight: 700;
   color: #fff;
@@ -28,12 +32,11 @@
 }
 
 .subbrand {
-  padding: 0 1.1rem 1rem;
+  margin-top: 0.2rem;
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: #7a8a92;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .nav {
@@ -104,6 +107,28 @@
   color: #fff;
 }
 
+.linkbtnAccent {
+  background: transparent;
+  border: none;
+  color: #8db8d6;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.linkbtnAccent:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.versionLabel {
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: #5d6e78;
+}
 .mainWrap {
   flex: 1;
   display: flex;
@@ -160,6 +185,12 @@
   color: #444;
 }
 
+.topbarVersion {
+  font-size: 0.75rem;
+  color: #888;
+  padding: 0 0.25rem;
+}
+
 .topbarBtn {
   display: inline-block;
   padding: 0.35rem 0.65rem;
@@ -174,14 +205,6 @@
 
 .topbarBtn:hover {
   background: #eee;
-}
-
-.navIcon {
-  display: inline-flex;
-  width: 18px;
-  justify-content: center;
-  margin-right: 0.45rem;
-  opacity: 0.9;
 }
 
 .srOnly {
@@ -301,17 +324,6 @@
 
 .table tr:nth-child(even) td {
   background: #fafafa;
-}
-
-.spriteDeckRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.spriteDeckRow > span {
-  margin-inline: -0.875rem;
 }
 
 .inputSm {
@@ -472,6 +484,10 @@
   padding: 1rem;
 }
 
+.modalBackdropHigh {
+  z-index: 1200;
+}
+
 .modal {
   background: #fff;
   border: 1px solid #ccc;
@@ -482,6 +498,30 @@
   overflow-y: auto;
   padding: 1.25rem 1.35rem;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+.posModal {
+  max-width: min(980px, 96vw);
+  width: 100%;
+  max-height: 92vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.posModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.posModalHeader h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #222;
 }
 
 .modal h2 {

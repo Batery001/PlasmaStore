@@ -4,6 +4,7 @@ import { resolveStoreMediaUrl } from "../lib/media";
 import { parseResponseJson } from "../lib/parseResponseJson";
 import { formatCLP } from "../lib/money";
 import { useAuth } from "../auth/AuthContext";
+import { notifyCartChanged } from "../lib/cartEvents";
 import styles from "./pages.module.css";
 
 type Product = {
@@ -79,6 +80,7 @@ export function ProductDetail() {
       setMsg(data.error || "No se pudo agregar");
       return;
     }
+    notifyCartChanged();
     if (goToCart) {
       window.location.href = "/carrito";
       return;

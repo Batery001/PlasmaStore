@@ -1,5 +1,5 @@
 /**
- * Crea el primer usuario admin en MongoDB (solo si no hay ningún admin).
+ * Crea el primer usuario admin (SQLite local o Mongo).
  * Uso: desde la raíz del proyecto → npm run create-admin
  */
 import path from "node:path";
@@ -10,8 +10,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 const { loadProjectEnv } = await import("../src/loadProjectEnv.mjs");
 loadProjectEnv(root);
 
-const { getDb } = await import("../src/mongo.mjs");
+const { getDb } = await import("../src/db.mjs");
 const { nextSeq } = await import("../src/counters.mjs");
+const { flushSqlitePersist } = await import("../src/sqliteMongo.mjs");
 
 const email = (process.env.ADMIN_EMAIL || "").trim().toLowerCase();
 const password = process.env.ADMIN_PASSWORD || "";
@@ -35,7 +36,7 @@ if (adminCount > 0) {
 const exists = await db.collection("store_users").findOne({ email });
 if (exists) {
   console.error(
-    `Ya existe un usuario con el email ${email} (rol: ${exists.role}). Cambia ADMIN_EMAIL o borra ese usuario en Atlas → Data Explorer.`
+    `Ya existe un usuario con el email ${email} (rol: ${exists.role}). Cambia ADMIN_EMAIL o borra ese usuario.`
   );
   process.exit(1);
 }
@@ -51,6 +52,7 @@ await db.collection("store_users").insertOne({
   createdAt: new Date(),
 });
 
+flushSqlitePersist();
 console.log(`Listo. Admin creado: ${email}`);
 console.log("Entra en /login con ese email y contraseña, luego abre /admin");
 process.exit(0);

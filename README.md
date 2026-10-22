@@ -1,51 +1,46 @@
-# Plasma Store (Next.js + Express + MongoDB)
+# Plasma Store TCG
 
-App web con:
-- **Frontend**: Next.js (App Router) + React Router para navegación interna
-- **Backend**: Express montado dentro de Next vía `src/pages/api/[[...slug]].ts`
-- **DB**: MongoDB (Atlas recomendado)
+Tienda actual (no el deploy viejo de Vercel/Mongo).
 
-## Requisitos
-- Node.js 18+ (recomendado 20+)
-- MongoDB Atlas o Mongo local
+- **Sitio:** https://plasmastoretcg.cl
+- **Stack:** Next.js 14 + Express + **SQLite** (`server/data/local.sqlite`)
+- **Pagos:** TUU Pago Online y Webpay
+- **Extra:** POS web, boletas, admin, envíos
+
+Repo: https://github.com/Batery001/PlasmaStore
 
 ## Setup local
-1) Crear variables de entorno:
 
 ```bash
 copy .env.example .env.local
 ```
 
-2) Rellenar como mínimo:
-- `MONGODB_URI`
-- `MONGODB_DB`
-- `APP_SESSION_SECRET`
+En `.env.local`:
 
-3) Instalar y levantar:
+- `DB_DRIVER=sqlite`
+- `APP_SESSION_SECRET`
+- `ADMIN_EMAIL` / `ADMIN_PASSWORD`
 
 ```bash
 npm install
+npm run check-env
+npm run create-admin
 npm run dev
 ```
 
-Abre `http://localhost:3000`.
+Abre http://localhost:3000 (admin → `/admin`).
 
-## Admin
-Si necesitas crear admin (BD nueva):
+## Producción (VPS)
 
-```bash
-npm run create-admin
-```
+En el servidor: `git pull`, `npm install`, `npm run build`, `pm2 restart plasmastore`.
 
-## Deploy en Vercel
-1) Importa el repo en Vercel.
-2) En **Project → Settings → Environment Variables**, agrega las mismas claves que en `.env.example`.
-3) Asegúrate de que en Mongo Atlas:
-- El cluster no esté “Paused”
-- **Network Access** permite el acceso (por ejemplo `0.0.0.0/0` o IPs de Vercel)
+No subas `.env.local` ni el archivo SQLite a Git.
+
+## Mongo (opcional)
+
+`DB_DRIVER=mongo` + `MONGODB_URI` + `MONGODB_DB`.
 
 ## Notas de estabilidad (dev)
-- Si aparece `Cannot find module './682.js'` / `./819.js`, normalmente es cache `.next` corrupta o procesos duplicados.
-  - Solución: matar procesos `node`, borrar `.next` y reiniciar `npm run dev`.
-- Evita correr `npm run build` mientras `npm run dev` está ejecutándose (puede gatillar problemas de chunks en Windows).
 
+- Si aparece `Cannot find module './682.js'`: mata `node`, borra `.next` y reinicia `npm run dev`.
+- Evita `npm run build` mientras corre `npm run dev` en Windows.

@@ -46,6 +46,26 @@
   border: 1px solid var(--border);
 }
 
+.checkRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+
+.checkRow input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.checkRow a {
+  color: var(--link);
+  font-weight: 700;
+}
+
 .pageTitle {
   font-size: 1.65rem;
   font-weight: 800;
@@ -88,6 +108,61 @@
   font-size: 0.88rem;
   font-weight: 600;
   color: var(--muted);
+}
+
+.passwordRules {
+  margin-top: 0.45rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-soft);
+  background: color-mix(in srgb, var(--card) 88%, #000);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.passwordRulesOk {
+  border-color: color-mix(in srgb, #22c55e 45%, var(--border-soft));
+  background: color-mix(in srgb, #22c55e 10%, var(--card));
+}
+
+.passwordRulesTitle {
+  margin-bottom: 0.45rem;
+  font-weight: 700;
+  color: var(--text);
+  font-size: 0.8rem;
+}
+
+.passwordRulesList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.passwordRulePending,
+.passwordRuleOk {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  line-height: 1.35;
+}
+
+.passwordRulePending {
+  color: var(--muted);
+}
+
+.passwordRuleOk {
+  color: #4ade80;
+}
+
+.passwordRuleMark {
+  flex: 0 0 1rem;
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.4;
 }
 
 .input,
@@ -202,6 +277,12 @@
 .cardTitleLink {
   text-decoration: none;
   color: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
 }
 
 .cardLinkCover {
@@ -209,6 +290,10 @@
   inset: 0;
   z-index: 1;
   text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
 }
 
 .cardTitle {
@@ -286,9 +371,90 @@
   border-bottom: 1px solid var(--border);
 }
 
+.cartRowReview {
+  display: grid;
+  grid-template-columns: 64px 1fr auto auto;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  padding: 0.95rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.cartRowReview a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cartRowReview a:hover {
+  color: var(--accent);
+}
+
+.cartThumb,
+.cartThumbFallback {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid var(--border-soft);
+  background: #12081c;
+}
+
+.cartThumbFallback {
+  background: linear-gradient(145deg, #2a1250, #12081c);
+}
+
+.checkoutSteps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin: 0 0 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.checkoutStepOn {
+  color: var(--accent);
+}
+
+.checkoutStepMuted {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.checkoutSummary {
+  margin: 0 0 1.15rem;
+  padding: 0.95rem 1.1rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: rgba(12, 6, 20, 0.45);
+}
+
+.checkoutSummaryList {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+}
+
+.checkoutSummaryList li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 0.92rem;
+}
+
 @media (max-width: 560px) {
-  .cartRow {
-    grid-template-columns: 1fr;
+  .cartRow,
+  .cartRowReview {
+    grid-template-columns: 64px 1fr;
+  }
+
+  .cartRowReview .qtyRow,
+  .cartRowReview .lineTotal {
+    grid-column: 1 / -1;
   }
 }
 
@@ -315,6 +481,91 @@
 .total {
   font-size: 1.15rem;
   margin: 0 0 0.5rem;
+}
+
+.fulfillBox {
+  margin: 1.5rem 0 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: rgba(12, 6, 20, 0.55);
+}
+
+.fulfillChoices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.65rem;
+  margin: 0.75rem 0 1rem;
+}
+
+.fulfillChoice {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  padding: 0.85rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(2, 6, 23, 0.35);
+  cursor: pointer;
+}
+
+.fulfillChoice span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.fulfillChoiceOn {
+  border-color: rgba(125, 211, 252, 0.55);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.2) inset;
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.fulfillHint {
+  margin: 0 0 0.85rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.fulfillForm {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+.fulfillRow2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+@media (max-width: 640px) {
+  .fulfillRow2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.totalsBox {
+  margin: 1rem 0 1.25rem;
+  max-width: 360px;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.totalsRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.totalsGrand {
+  margin-top: 0.25rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--border-soft);
+  color: var(--text);
+  font-size: 1.1rem;
 }
 
 .linkbtn {
@@ -620,6 +871,32 @@
   margin-top: 0.5rem;
 }
 
+.eventTagFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.65rem 0 1rem;
+}
+
+.eventTagChip {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.eventTagChipOn {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+
 .cardThumb {
   height: 120px;
   border-radius: 12px;
@@ -658,6 +935,14 @@
   object-position: center;
   display: block;
   transform: none;
+}
+
+.eventCardThumb {
+  height: 180px;
+}
+
+.eventCardThumb .cardImage {
+  object-fit: cover;
 }
 
 /* === Singles (estilo marketplace tipo TCGplayer) === */
