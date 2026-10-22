@@ -2239,6 +2239,25 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
           method === "shipping" ? (shipCfg.charge_shipping_online ? "online" : "por_pagar") : null,
       };
 
+      const pickupAddress = shipCfg.pickup_address;
+      const shippingNote = shipCfg.shipping_note;
+
+      const fulfillment = {
+        method,
+        label: method === "pickup" ? "Retiro en tienda" : "Envío a domicilio (Starken)",
+        recipient: recipient || null,
+        phone: phone || null,
+        email: buyerEmail,
+        rut: rutParsed.formatted,
+        notes: notes || null,
+        address,
+        pickup_address: method === "pickup" ? pickupAddress : null,
+        shipping_note: method === "shipping" ? shippingNote : null,
+        shipping_fee_cents,
+        shipping_payment:
+          method === "shipping" ? (shipCfg.charge_shipping_online ? "online" : "por_pagar") : null,
+      };
+
       const orderId = await nextSeq(db, "order");
       // buy_order debe ser único en Transbank (máx 26). En integración el comercio es compartido.
       const buyOrder = `PS${orderId}${Date.now().toString(36)}`.replace(/[^a-zA-Z0-9]/g, "").slice(0, 26);
@@ -2679,14 +2698,40 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
               const qty = parseInt(String(it?.quantity ?? 0), 10);
               if (!Number.isFinite(pid) || pid < 1 || !Number.isFinite(qty) || qty < 1) continue;
 
-              const r = await db.collection("products").updateOne(
-                { _id: pid, active: { $ne: 0 }, stock: { $gte: qty } },
-                { $inc: { stock: -qty }, $set: { updatedAt: now } }
+                const r = await db.collection("products").updateOne(
+                  { _id: pid, active: { $ne: 0 }, stock: { $gte: qty } },
+                  { $inc: { stock: -qty }, $set: { updatedAt: now } }
+                );
+                if (!r?.modifiedCount) {
+                  throw Object.assign(new Error(STOCK_GONE_MSG), { code: "STOCK_RACE", product_id: pid });
+                }
+                touched.push({ product_id: pid, quantity: qty });
+              }
+
+              await consumeReservationsForOrder(db, order._id);
+              for (const t of touched) {
+                const fresh = await db.collection("products").findOne({ _id: t.product_id }, { projection: { stock: 1 } });
+                await recordStockMovement(db, {
+                  product_id: t.product_id,
+                  delta: -t.quantity,
+                  reason: "venta_web",
+                  order_id: order._id,
+                  stock_after: Math.max(0, parseInt(String(fresh?.stock ?? 0), 10) || 0),
+                });
+              }
+              await db.collection("store_orders").updateOne(
+                { _id: order._id },
+                { $set: { inventory_applied: true, inventory_applied_at: now, updatedAt: now } }
               );
               if (!r?.modifiedCount) {
                   throw Object.assign(new Error(STOCK_GONE_MSG), { code: "STOCK_RACE", product_id: pid });
               }
-              touched.push({ product_id: pid, quantity: qty });
+              inventoryWarning = e instanceof Error ? e.message : STOCK_GONE_MSG;
+              await releaseReservationsForOrder(db, order._id, "inventory_failed");
+              await db.collection("store_orders").updateOne(
+                { _id: order._id },
+                { $set: { inventory_applied: false, inventory_error: inventoryWarning, needs_manual_review: true, updatedAt: now } }
+              );
             }
 
               await consumeReservationsForOrder(db, order._id);
