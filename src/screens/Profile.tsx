@@ -89,8 +89,6 @@ type MyEvent = {
   event_player?: { popid?: string; cl?: string; full_name?: string; birth_year?: number; game_tag?: string } | null;
 };
 
-type TabId = "info" | "compras" | "seguridad" | "privacidad";
-
 function statusLabel(s: string | undefined) {
   const map: Record<string, string> = {
     pending_payment: "Pendiente pago",
