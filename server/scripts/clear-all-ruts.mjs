@@ -1,6 +1,6 @@
 /**
  * Quita RUT de todas las cuentas (y pedidos) para poder reasignarlos.
- * No borra usuarios ni pedidos: solo limpia campos de RUT.
+ * Compatible con SQLite (sql.js) y Mongo.
  *
  * Uso (VPS o local):
  *   CONFIRM=YES npm run clear-all-ruts
@@ -22,25 +22,33 @@ const { flushSqlitePersist } = await import("../src/sqliteMongo.mjs");
 
 const db = await getDb();
 
-const usersBefore = await db.collection("store_users").countDocuments({
-  $or: [{ rut: { $ne: null } }, { rut_normalized: { $ne: null } }, { rut: { $exists: true } }],
-});
-
-const usersRes = await db.collection("store_users").updateMany(
-  {},
-  { $set: { rut: null, rut_normalized: null } }
-);
-
-const ordersRes = await db.collection("store_orders").updateMany(
-  {},
-  {
-    $set: {
-      buyer_rut: null,
-      buyer_rut_normalized: null,
-      "fulfillment.rut": null,
-    },
+async function clearCollection(name, patch) {
+  const col = db.collection(name);
+  const rows = await col.find({}).toArray();
+  let cleared = 0;
+  for (const row of rows) {
+    const hasRut =
+      row.rut != null ||
+      row.rut_normalized != null ||
+      row.buyer_rut != null ||
+      row.buyer_rut_normalized != null ||
+      row.fulfillment?.rut != null;
+    if (!hasRut && name === "store_users") {
+      // Igual limpiamos por si hay string vacío
+      if (!row.rut && !row.rut_normalized) continue;
+    }
+    await col.updateOne({ _id: row._id }, { $set: patch });
+    cleared += 1;
   }
-);
+  return { total: rows.length, cleared };
+}
+
+const users = await clearCollection("store_users", { rut: null, rut_normalized: null });
+const orders = await clearCollection("store_orders", {
+  buyer_rut: null,
+  buyer_rut_normalized: null,
+  "fulfillment.rut": null,
+});
 
 try {
   flushSqlitePersist();
@@ -52,9 +60,10 @@ console.log(
   JSON.stringify(
     {
       ok: true,
-      users_with_rut_before: usersBefore,
-      users_cleared: usersRes.modifiedCount ?? usersRes.matchedCount ?? 0,
-      orders_touched: ordersRes.modifiedCount ?? ordersRes.matchedCount ?? 0,
+      users_total: users.total,
+      users_cleared: users.cleared,
+      orders_total: orders.total,
+      orders_cleared: orders.cleared,
     },
     null,
     2
