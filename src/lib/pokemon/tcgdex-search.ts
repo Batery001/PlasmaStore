@@ -86,7 +86,7 @@ function passesFormat(card: TcgdexFull, format: DeckFormat): boolean {
     return false;
   }
 
-  if (card.legal?.expanded === true) return true;
+  // Expanded / resto
   if (!card.legal) return true;
   return card.legal.expanded === true;
 }
