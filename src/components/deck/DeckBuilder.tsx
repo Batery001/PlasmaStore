@@ -271,41 +271,71 @@ export function DeckBuilder({
           }}
         >
           {hasQuery
-            ? results.map((card) => (
-                <button
-                  key={card.id}
-                  type="button"
-                  disabled={total >= 60}
-                  onClick={() => handleAddCard(card)}
-                  title={`${card.name} ${formatCardCode(card)}`}
-                  style={{
-                    border: "none",
-                    background: "transparent",
-                    padding: 0,
-                    cursor: total >= 60 ? "not-allowed" : "pointer",
-                    opacity: total >= 60 ? 0.5 : 1,
-                    flex: "0 0 auto",
-                    width: "4.1rem",
-                    textAlign: "center",
-                  }}
-                >
-                  <CardImage image={card.image} name={card.name} />
-                  <span
-                    className={styles.muted}
+            ? results.map((card) => {
+                const code = formatCardCode(card);
+                const set = String(card.setCode || "").toUpperCase();
+                const isPromo = set === "MEP" || set === "SVP" || set === "MEE" || set === "PR-SV";
+                return (
+                  <button
+                    key={card.id}
+                    type="button"
+                    disabled={total >= 60}
+                    onClick={() => handleAddCard(card)}
+                    title={`${card.name} ${code}${isPromo ? " · Promo" : ""}`}
                     style={{
-                      display: "block",
-                      fontSize: 9,
-                      lineHeight: 1.2,
-                      marginTop: 2,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
+                      border: isPromo ? "2px solid var(--accent, #a78bfa)" : "1px solid var(--border)",
+                      borderRadius: 6,
+                      background: "transparent",
+                      padding: 2,
+                      cursor: total >= 60 ? "not-allowed" : "pointer",
+                      opacity: total >= 60 ? 0.5 : 1,
+                      flex: "0 0 auto",
+                      width: "4.4rem",
+                      textAlign: "center",
+                      position: "relative",
                     }}
                   >
-                    {formatCardCode(card) || card.name}
-                  </span>
-                </button>
-              ))
+                    <div style={{ position: "relative", display: "inline-block" }}>
+                      <CardImage image={card.image} name={card.name} />
+                      {isPromo ? (
+                        <span
+                          style={{
+                            position: "absolute",
+                            top: 2,
+                            left: 2,
+                            right: 2,
+                            fontSize: 9,
+                            fontWeight: 700,
+                            letterSpacing: 0.3,
+                            lineHeight: 1.2,
+                            padding: "1px 3px",
+                            borderRadius: 3,
+                            background: "rgba(0,0,0,0.78)",
+                            color: "#fff",
+                          }}
+                        >
+                          {set || "PROMO"}
+                        </span>
+                      ) : null}
+                    </div>
+                    <span
+                      style={{
+                        display: "block",
+                        fontSize: 10,
+                        fontWeight: isPromo ? 700 : 500,
+                        lineHeight: 1.2,
+                        marginTop: 3,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        color: isPromo ? "var(--accent, #a78bfa)" : "inherit",
+                      }}
+                    >
+                      {code || card.name}
+                    </span>
+                  </button>
+                );
+              })
             : null}
         </div>
         <div
