@@ -154,7 +154,11 @@ export async function searchTcgdexCards(options) {
   const briefs = await fetchJson(url.toString());
   if (!Array.isArray(briefs) || !briefs.length) return [];
 
-  const candidates = [...briefs]
+  const qLower = q.toLowerCase();
+  const matched = briefs.filter((b) => String(b.name || "").toLowerCase().includes(qLower));
+  const pool = matched.length ? matched : briefs;
+
+  const candidates = [...pool]
     .sort((a, b) => briefPriority(b) - briefPriority(a))
     .slice(0, BRIEF_CANDIDATES);
 

@@ -12,6 +12,7 @@ import {
   type DeckFormat,
   type DeckTypeFilter,
 } from "../../lib/pokemon/deck-builder";
+import { searchTcgdexCards } from "../../lib/pokemon/tcgdex-search";
 import { tcgdxImageVariants } from "../../lib/pokemon/tcgdex-image";
 import styles from "../../screens/pages.module.css";
 
@@ -105,15 +106,13 @@ export function DeckBuilder({
     setSearching(true);
     setSearchError(null);
     try {
-      const params = new URLSearchParams({ q: query.trim(), type: typeFilter, format });
-      const res = await fetch(`/api/store/cards/search?${params}`);
-      const data = (await res.json()) as { cards?: CardSearchResult[]; error?: string; ok?: boolean };
-      if (!res.ok) {
-        setResults([]);
-        setSearchError(data.error ?? "No se pudo buscar cartas");
-        return;
-      }
-      setResults(data.cards ?? []);
+      // TCGdex en cliente: incluye MEP/promos (pokemontcg.io no tiene ese set).
+      const cards = await searchTcgdexCards({
+        query: query.trim(),
+        type: typeFilter,
+        format,
+      });
+      setResults(cards);
     } catch {
       setResults([]);
       setSearchError("Error de red al buscar cartas");
@@ -162,7 +161,7 @@ export function DeckBuilder({
   const hasQuery = query.trim().length > 0;
 
   return (
-    <div style={{ display: "grid", gap: "1rem" }}>
+    <div style={{ display: "grid", gap: "1rem", width: "100%", maxWidth: "100%", minWidth: 0 }}>
       <p className={styles.muted}>
         Busca cartas o{" "}
         <button type="button" className={styles.linkbtn} onClick={() => setPasteOpen(true)}>
@@ -229,6 +228,11 @@ export function DeckBuilder({
           borderRadius: 10,
           padding: "0.75rem",
           background: "var(--card)",
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          overflow: "hidden",
+          boxSizing: "border-box",
         }}
       >
         {searching && hasQuery ? <p className={styles.muted}>Buscando…</p> : null}
@@ -236,7 +240,20 @@ export function DeckBuilder({
         {hasQuery && !searching && !searchError && results.length === 0 ? (
           <p className={styles.muted}>Sin resultados.</p>
         ) : null}
-        <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            overflowX: "auto",
+            overflowY: "hidden",
+            width: "100%",
+            maxWidth: "100%",
+            minWidth: 0,
+            paddingBottom: 6,
+            WebkitOverflowScrolling: "touch",
+            overscrollBehaviorX: "contain",
+          }}
+        >
           {hasQuery
             ? results.map((card) => (
                 <button
@@ -251,9 +268,26 @@ export function DeckBuilder({
                     padding: 0,
                     cursor: total >= 60 ? "not-allowed" : "pointer",
                     opacity: total >= 60 ? 0.5 : 1,
+                    flex: "0 0 auto",
+                    width: "4.1rem",
+                    textAlign: "center",
                   }}
                 >
                   <CardImage image={card.image} name={card.name} />
+                  <span
+                    className={styles.muted}
+                    style={{
+                      display: "block",
+                      fontSize: 9,
+                      lineHeight: 1.2,
+                      marginTop: 2,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {formatCardCode(card) || card.name}
+                  </span>
                 </button>
               ))
             : null}

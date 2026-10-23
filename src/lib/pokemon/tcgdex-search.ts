@@ -119,8 +119,13 @@ export async function searchTcgdexCards(options: {
   const briefs = await fetchJson<TcgdexBrief[]>(url.toString());
   if (!briefs?.length) return [];
 
+  const qLower = q.toLowerCase();
+  // La API a veces trae coincidencias flojas: nos quedamos con nombres que contienen la búsqueda.
+  const matched = briefs.filter((b) => String(b.name || "").toLowerCase().includes(qLower));
+  const pool = matched.length ? matched : briefs;
+
   const format = options.format ?? "standard";
-  const candidates = prioritizeBriefs(briefs).slice(0, BRIEF_CANDIDATES);
+  const candidates = prioritizeBriefs(pool).slice(0, BRIEF_CANDIDATES);
   const accepted: TcgdexFull[] = [];
 
   for (let i = 0; i < candidates.length && accepted.length < MAX_RESULTS; i += FETCH_BATCH) {
