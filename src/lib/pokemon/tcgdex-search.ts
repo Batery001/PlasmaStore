@@ -1,6 +1,6 @@
 import type { DeckCardCategory } from "./deckParser";
 import type { CardSearchResult, DeckFormat, DeckTypeFilter } from "./deck-builder";
-import { enrichCardImage, buildTcgdexImageUrl } from "./tcgdex-image";
+import { enrichCardImage, resolveCardImageUrl } from "./tcgdex-image";
 import { parseTcgdexCardId, tcgdexSetToLimitless } from "./limitless-set-codes";
 
 const TCGDEX_BASE = "https://api.tcgdex.net/v2/en";
@@ -96,16 +96,13 @@ function briefToResult(card: TcgdexFull): CardSearchResult {
   const tcgdexSetId = card.set?.id ?? parsed?.tcgdexSetId;
   const number = card.localId ?? parsed?.localId;
   const setCode = tcgdexSetId ? tcgdexSetToLimitless(tcgdexSetId) ?? tcgdexSetId.toUpperCase() : undefined;
-  // Preferir imagen ya enriquecida (p. ej. arte prestado de otra impresión).
-  const image = card.image?.trim() || buildTcgdexImageUrl(card);
-
   return {
     id: card.id,
     name: card.name,
     category: tcgdxCategoryToDeck(card.category),
     setCode,
     number,
-    image,
+    image: resolveCardImageUrl(card),
   };
 }
 
@@ -163,9 +160,7 @@ export async function searchTcgdexCards(options: {
 
   if (accepted.length === 0) return [];
 
-  // Primero las que ya traen `image` de la API, para poder prestar arte a promos sin CDN.
-  const orderedForArt = [...accepted].sort((a, b) => Number(Boolean(b.image)) - Number(Boolean(a.image)));
-  const enriched = orderedForArt.map((c) => enrichCardImage(c, orderedForArt));
+  const enriched = accepted.map((c) => enrichCardImage(c));
 
   const results = enriched
     .map(briefToResult)

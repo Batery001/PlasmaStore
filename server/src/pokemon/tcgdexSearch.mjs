@@ -63,12 +63,40 @@ function seriesFromSetId(setId) {
   return s.match(/^[a-z]+/)?.[0] || "sv";
 }
 
+const PROMO_SETS = new Set(["MEP", "SVP", "MEE"]);
+
+function padCardNumber(localId) {
+  const digits = String(localId || "").replace(/\D/g, "");
+  if (!digits) return String(localId || "");
+  return digits.padStart(3, "0");
+}
+
+function buildLimitlessPromoImageUrl(setCode, localId) {
+  const set = String(setCode || "")
+    .trim()
+    .toUpperCase();
+  if (!PROMO_SETS.has(set)) return undefined;
+  const n = padCardNumber(localId);
+  if (!n) return undefined;
+  return `https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/${set}/${set}_${n}_R_EN_LG.png`;
+}
+
+/** Arte de ESTA impresión. Promos → Limitless. Nunca prestar otra carta. */
 function buildImageUrl(card) {
-  if (card.image?.trim()) return card.image.trim();
   const parsed = parseCardId(card.id);
   const setId = card.set?.id || parsed?.setId;
   const localId = card.localId || parsed?.localId;
   if (!setId || !localId) return undefined;
+
+  const limitlessSet = TCGDEX_TO_LIMITLESS[setId] || String(setId).toUpperCase();
+  if (PROMO_SETS.has(String(limitlessSet).toUpperCase())) {
+    const lim = buildLimitlessPromoImageUrl(limitlessSet, localId);
+    if (lim) return lim;
+  }
+
+  const apiImg = card.image && String(card.image).trim();
+  if (apiImg && apiImg.includes(`/${setId}/`)) return apiImg;
+
   return `https://assets.tcgdex.net/en/${seriesFromSetId(setId)}/${setId}/${localId}`;
 }
 
@@ -139,7 +167,7 @@ function toResult(card) {
     category: toDeckCategory(card.category),
     setCode,
     number,
-    image: (card.image && String(card.image).trim()) || buildImageUrl(card),
+    image: buildImageUrl(card),
   };
 }
 
@@ -195,21 +223,8 @@ export async function searchTcgdexCards(options) {
     }
   }
 
-  // Prestar arte de otra impresión cuando la promo no tiene imagen en el CDN.
-  const withArt = [...accepted].sort((a, b) => Number(Boolean(b.image)) - Number(Boolean(a.image)));
-  for (const card of withArt) {
-    if (card.image) continue;
-    const name = String(card.name || "")
-      .trim()
-      .toLowerCase();
-    const peer = withArt.find(
-      (p) => p !== card && String(p.name || "").trim().toLowerCase() === name && p.image
-    );
-    if (peer?.image) card.image = peer.image;
-  }
-
   const seen = new Map();
-  const results = withArt.map(toResult).sort((a, b) => scoreResult(b) - scoreResult(a));
+  const results = accepted.map(toResult).sort((a, b) => scoreResult(b) - scoreResult(a));
 
   for (const card of results) {
     const key = `${card.name}|${card.setCode || ""}|${card.number || ""}`.toLowerCase();
