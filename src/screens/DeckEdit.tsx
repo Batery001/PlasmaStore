@@ -4,7 +4,12 @@ import { useAuth } from "../auth/AuthContext";
 import { DeckBuilder } from "../components/deck/DeckBuilder";
 import { MylDeckBuilder } from "../components/deck/MylDeckBuilder";
 import { DeckTour, clearDeckTourDone, shouldStartDeckTour } from "../components/DeckTour";
-import { deckGameLabel, normalizeDeckGame, type DeckGame } from "../lib/deckGames";
+import {
+  MYL_DECK_CREATION_ENABLED,
+  deckGameLabel,
+  normalizeDeckGame,
+  type DeckGame,
+} from "../lib/deckGames";
 import { parsePokemonDecklist } from "../lib/pokemon/deckParser";
 import { parseResponseJson } from "../lib/parseResponseJson";
 import styles from "./pages.module.css";
@@ -13,6 +18,9 @@ type DeckDetail = {
   id: number;
   name: string;
   game?: DeckGame | string;
+  mylEra?: string | null;
+  mylRace?: string | null;
+  mylDeckFormat?: string | null;
   rawText: string;
   validation?: { cardCount?: number; errorMessages?: string[]; warnings?: string[] };
 };
@@ -27,11 +35,18 @@ export function DeckEdit() {
 
   const gameHint = search.get("game");
   const forceTour = search.get("tour") === "1";
-  const [game, setGame] = useState<DeckGame | null>(() =>
-    isNew ? (gameHint ? normalizeDeckGame(gameHint) : null) : "pokemon",
-  );
+  const [game, setGame] = useState<DeckGame | null>(() => {
+    if (!isNew) return "pokemon";
+    if (!gameHint) return null;
+    const g = normalizeDeckGame(gameHint);
+    if (g === "mitos-y-leyendas" && !MYL_DECK_CREATION_ENABLED) return null;
+    return g;
+  });
   const [name, setName] = useState("");
   const [rawText, setRawText] = useState("");
+  const [mylEra, setMylEra] = useState("");
+  const [mylRace, setMylRace] = useState("");
+  const [mylDeckFormat, setMylDeckFormat] = useState("soporte-libre");
   const [mode, setMode] = useState<"paste" | "build">("paste");
   const [buildKey, setBuildKey] = useState(0);
   const [loading, setLoading] = useState(!isNew);
@@ -58,6 +73,9 @@ export function DeckEdit() {
         setGame(normalizeDeckGame(j.deck.game));
         setName(j.deck.name);
         setRawText(j.deck.rawText || "");
+        setMylEra(String(j.deck.mylEra || ""));
+        setMylRace(String(j.deck.mylRace || ""));
+        setMylDeckFormat(String(j.deck.mylDeckFormat || "soporte-libre"));
         setServerErrors(j.deck.validation?.errorMessages || []);
         setServerWarnings(j.deck.validation?.warnings || []);
         setLoading(false);
@@ -75,7 +93,9 @@ export function DeckEdit() {
 
   useEffect(() => {
     if (!isNew || !gameHint) return;
-    setGame(normalizeDeckGame(gameHint));
+    const g = normalizeDeckGame(gameHint);
+    if (g === "mitos-y-leyendas" && !MYL_DECK_CREATION_ENABLED) return;
+    setGame(g);
   }, [isNew, gameHint]);
 
   useEffect(() => {
@@ -94,6 +114,17 @@ export function DeckEdit() {
   async function save(e?: FormEvent) {
     e?.preventDefault();
     if (!game) return;
+    if (game === "mitos-y-leyendas") {
+      const needsRace = mylDeckFormat !== "libre";
+      if (!mylEra || (needsRace && !mylRace)) {
+        setErr(
+          needsRace
+            ? "Elige era (PE/PB), construcción del mazo y raza."
+            : "Elige era (Primera Era / Primer Bloque)."
+        );
+        return;
+      }
+    }
     setBusy(true);
     setErr(null);
     try {
@@ -103,7 +134,12 @@ export function DeckEdit() {
         method,
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, rawText, game }),
+        body: JSON.stringify({
+          name,
+          rawText,
+          game,
+          ...(game === "mitos-y-leyendas" ? { mylEra, mylRace, mylDeckFormat } : {}),
+        }),
       });
       const data = await parseResponseJson<{
         ok?: boolean;
@@ -139,10 +175,15 @@ export function DeckEdit() {
     }
   }
 
-  function pickGame(next: DeckGame) {
+  function pickGame(next: DeckGame, nextMode: "paste" | "build" = "paste") {
+    if (next === "mitos-y-leyendas" && !MYL_DECK_CREATION_ENABLED) return;
     setGame(next);
-    setMode("paste");
+    setMode(nextMode);
     setErr(null);
+    if (next !== "mitos-y-leyendas") {
+      setMylEra("");
+      setMylRace("");
+    }
   }
 
   if (authLoading) return <p className={styles.muted}>Cargando…</p>;
@@ -174,16 +215,15 @@ export function DeckEdit() {
           <button type="button" className={styles.btnPrimary} onClick={() => pickGame("pokemon")}>
             Pokémon TCG
           </button>
-          <button
-            type="button"
-            className={styles.btnGhost}
-            onClick={() => {
-              setMode("build");
-              pickGame("mitos-y-leyendas");
-            }}
-          >
-            Mitos y Leyendas
-          </button>
+          {MYL_DECK_CREATION_ENABLED ? (
+            <button type="button" className={styles.btnGhost} onClick={() => pickGame("mitos-y-leyendas", "build")}>
+              Mitos y Leyendas
+            </button>
+          ) : (
+            <p className={styles.muted} style={{ margin: 0, fontSize: 13 }}>
+              Mazos de Mitos y Leyendas: próximamente.
+            </p>
+          )}
         </div>
       </div>
     );
@@ -296,7 +336,15 @@ export function DeckEdit() {
           <MylDeckBuilder
             key={buildKey}
             initialRawText={rawText}
+            era={mylEra}
+            race={mylRace}
+            deckFormat={mylDeckFormat}
             applyListLabel="Usar esta lista"
+            onEraRaceChange={({ era, race, deckFormat }) => {
+              setMylEra(era);
+              setMylRace(race);
+              setMylDeckFormat(deckFormat);
+            }}
             onRawTextReady={(text) => {
               setRawText(text);
               setMode("paste");

@@ -7,7 +7,8 @@ import { clientKey, rateLimit } from "../rateLimit.mjs";
 import { parseAndEnrichPokemonDecklist } from "./enrichCategories.mjs";
 import { toStoredParsedCards } from "./deckParser.mjs";
 import { searchPokemontcgCards } from "./pokemontcgSearch.mjs";
-import { searchMylCards } from "../myl/mylSearch.mjs";
+import { mylMeta, searchMylCards } from "../myl/mylSearch.mjs";
+import { normalizeMylDeckFormat, normalizeMylEra, normalizeMylRace } from "../eventFormats.mjs";
 
 function normalizeDeckGame(raw) {
   const s = String(raw || "")
@@ -37,6 +38,9 @@ function publicDeckSummary(d) {
     id: d._id,
     name: d.name,
     game,
+    mylEra: d.myl_era || null,
+    mylRace: d.myl_race || null,
+    mylDeckFormat: d.myl_deck_format || null,
     cardCount: validation.cardCount,
     isValid: validation.errorMessages.length === 0,
     updatedAt: d.updatedAt || null,
@@ -48,6 +52,9 @@ function publicDeckDetail(d) {
     id: d._id,
     name: d.name,
     game: normalizeDeckGame(d.game),
+    mylEra: d.myl_era || null,
+    mylRace: d.myl_race || null,
+    mylDeckFormat: d.myl_deck_format || null,
     rawText: d.rawText || "",
     validation: serializeValidation(d.validation),
     updatedAt: d.updatedAt || null,
@@ -163,6 +170,22 @@ export function mountDeckRoutes(app, { getDb, requireUser, handleErr }) {
       if (!name || !rawText) {
         return res.status(400).json({ ok: false, error: "Nombre y lista son obligatorios." });
       }
+      const mylEra = game === "mitos-y-leyendas" ? normalizeMylEra(req.body?.mylEra || req.body?.myl_era) : "";
+      const mylDeckFormat =
+        game === "mitos-y-leyendas"
+          ? normalizeMylDeckFormat(req.body?.mylDeckFormat || req.body?.myl_deck_format) || "soporte-libre"
+          : "";
+      const mylRace =
+        game === "mitos-y-leyendas" ? normalizeMylRace(req.body?.mylRace || req.body?.myl_race, mylEra) : "";
+      const needsRace = mylDeckFormat !== "libre";
+      if (game === "mitos-y-leyendas" && (!mylEra || (needsRace && !mylRace))) {
+        return res.status(400).json({
+          ok: false,
+          error: needsRace
+            ? "Para MyL elige era (PE/PB), construcción y raza."
+            : "Para MyL elige era (Primera Era / Primer Bloque).",
+        });
+      }
       const payload = await buildDeckPayload(game, rawText);
       const db = await getDb();
       const id = await nextSeq(db, "player_deck");
@@ -175,6 +198,9 @@ export function mountDeckRoutes(app, { getDb, requireUser, handleErr }) {
         rawText: payload.rawText,
         parsedCards: payload.parsedCards,
         validation: payload.validation,
+        ...(game === "mitos-y-leyendas"
+          ? { myl_era: mylEra, myl_race: mylRace || null, myl_deck_format: mylDeckFormat }
+          : {}),
         createdAt: now,
         updatedAt: now,
       };
@@ -204,6 +230,22 @@ export function mountDeckRoutes(app, { getDb, requireUser, handleErr }) {
         req.body?.game != null ? normalizeDeckGame(req.body.game) : normalizeDeckGame(deck.game);
       if (req.body?.game != null) patch.game = game;
 
+      if (game === "mitos-y-leyendas") {
+        if (req.body?.mylEra != null || req.body?.myl_era != null) {
+          patch.myl_era = normalizeMylEra(req.body?.mylEra || req.body?.myl_era);
+        }
+        if (req.body?.mylDeckFormat != null || req.body?.myl_deck_format != null) {
+          patch.myl_deck_format =
+            normalizeMylDeckFormat(req.body?.mylDeckFormat || req.body?.myl_deck_format) ||
+            "soporte-libre";
+        }
+        if (req.body?.mylRace != null || req.body?.myl_race != null) {
+          patch.myl_race = normalizeMylRace(
+            req.body?.mylRace || req.body?.myl_race,
+            patch.myl_era || deck.myl_era
+          );
+        }
+      }
       if (req.body?.rawText != null) {
         const rawText = String(req.body.rawText || "").trim();
         if (!rawText) {
@@ -279,6 +321,14 @@ export function mountDeckRoutes(app, { getDb, requireUser, handleErr }) {
     }
   });
 
+  app.get("/api/store/myl/meta", async (req, res) => {
+    try {
+      res.json({ ok: true, ...mylMeta(req.query.era) });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
   app.get("/api/store/myl/cards/search", async (req, res) => {
     try {
       const rl = rateLimit(clientKey(req, "myl-cards-search"), { limit: 60, windowMs: 60_000 });
@@ -286,11 +336,29 @@ export function mountDeckRoutes(app, { getDb, requireUser, handleErr }) {
         return res.status(429).json({ ok: false, error: "Demasiadas búsquedas. Espera un momento." });
       }
       const q = String(req.query.q || "").trim();
-      if (q.length < 2) return res.json({ ok: true, cards: [] });
       const type = String(req.query.type || "all").trim().toLowerCase() || "all";
-      const cards = await searchMylCards({ query: q, type });
-      res.json({ ok: true, cards });
+      const era = String(req.query.era || "").trim();
+      const race = String(req.query.race || "").trim();
+      const deckFormat = normalizeMylDeckFormat(req.query.deckFormat || req.query.deck_format) || "soporte-libre";
+      const isLibre = deckFormat === "libre";
+      if (q.length < 2 && !race && !isLibre) {
+        return res.json({ ok: true, cards: [], hint: "Elige raza o escribe al menos 2 letras." });
+      }
+      if (q.length < 2 && isLibre && !era) {
+        return res.json({ ok: true, cards: [], hint: "Elige era (PE/PB) o escribe al menos 2 letras." });
+      }
+      const cards = await searchMylCards({ query: q, type, era, race, deckFormat });
+      res.json({
+        ok: true,
+        cards,
+        era: normalizeMylEra(era) || null,
+        race: normalizeMylRace(race, era) || null,
+        deckFormat,
+      });
     } catch (e) {
+      if (e?.name === "AbortError" || /aborted/i.test(String(e?.message || e))) {
+        return res.status(504).json({ ok: false, error: "La búsqueda MyL tardó demasiado. Probá de nuevo." });
+      }
       handleErr(res, e);
     }
   });

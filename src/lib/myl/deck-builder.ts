@@ -1,9 +1,14 @@
 import type { MylCardSearchResult, MylCardType } from "./myl-search";
 
+/** Reglas JO / FAQ Castillo (Primer Bloque y equivalentes). */
 export const MYL_DECK_SIZE = 50;
-export const MYL_MAX_COPIES = 4;
+export const MYL_MAX_COPIES = 3;
+/** Mínimo de Aliados en mazos Racial / Racial soporte libre. */
+export const MYL_MIN_ALLIES_RACIAL = 16;
 
 export type MylTypeFilter = "all" | MylCardType;
+
+export type MylDeckConstruction = "racial" | "soporte-libre" | "libre";
 
 export type MylDeckSlot = {
   key: string;
@@ -38,6 +43,10 @@ export function mylSlotKey(card: { id?: string; name: string; editionId?: string
 
 export function mylDeckTotal(slots: MylDeckSlot[]) {
   return slots.reduce((s, c) => s + c.qty, 0);
+}
+
+export function mylAllyCount(slots: MylDeckSlot[]) {
+  return slots.filter((s) => s.type === "aliado").reduce((n, s) => n + s.qty, 0);
 }
 
 export function mylSlotsByType(slots: MylDeckSlot[]) {
@@ -140,7 +149,6 @@ export function importMylRawTextToSlots(rawText: string): { slots: MylDeckSlot[]
   let total = mylDeckTotal(slots);
   if (total > MYL_DECK_SIZE) {
     errors.push(`La lista supera ${MYL_DECK_SIZE} cartas (${total}).`);
-    // recorta desde el final
     while (total > MYL_DECK_SIZE && slots.length) {
       const last = slots[slots.length - 1];
       const drop = Math.min(last.qty, total - MYL_DECK_SIZE);
@@ -152,9 +160,26 @@ export function importMylRawTextToSlots(rawText: string): { slots: MylDeckSlot[]
   return { slots, errors };
 }
 
-export function getMylDeckLegality(slots: MylDeckSlot[]) {
+export function needsRaceForConstruction(construction: MylDeckConstruction | string) {
+  const c = String(construction || "soporte-libre");
+  return c !== "libre" && c !== "full";
+}
+
+/**
+ * Legalidad de construcción JO (tamaño, copias, mínimo de Aliados en racial).
+ * El filtro por raza/edición lo hace el catálogo de búsqueda; acá validamos conteos.
+ */
+export function getMylDeckLegality(
+  slots: MylDeckSlot[],
+  opts?: { deckFormat?: MylDeckConstruction | string }
+) {
   const total = mylDeckTotal(slots);
+  const allies = mylAllyCount(slots);
+  const deckFormat = String(opts?.deckFormat || "soporte-libre");
+  const isRacial = deckFormat === "racial" || deckFormat === "soporte-libre" || deckFormat === "soporte-edicion";
   const errors: string[] = [];
+  const warnings: string[] = [];
+
   if (total !== MYL_DECK_SIZE) {
     errors.push(`El mazo debe tener ${MYL_DECK_SIZE} cartas (ahora ${total}).`);
   }
@@ -163,5 +188,20 @@ export function getMylDeckLegality(slots: MylDeckSlot[]) {
       errors.push(`Máximo ${MYL_MAX_COPIES} copias de ${s.name}.`);
     }
   }
-  return { legal: errors.length === 0, errors, total };
+  if (isRacial && allies < MYL_MIN_ALLIES_RACIAL) {
+    errors.push(
+      `En racial necesitás al menos ${MYL_MIN_ALLIES_RACIAL} Aliados (ahora ${allies}).`
+    );
+  } else if (isRacial && allies < MYL_MIN_ALLIES_RACIAL + 4 && allies >= MYL_MIN_ALLIES_RACIAL) {
+    warnings.push(`Vas justo de Aliados (${allies}). El mínimo JO es ${MYL_MIN_ALLIES_RACIAL}.`);
+  }
+
+  return {
+    legal: errors.length === 0,
+    errors,
+    warnings,
+    total,
+    allies,
+    minAllies: isRacial ? MYL_MIN_ALLIES_RACIAL : 0,
+  };
 }

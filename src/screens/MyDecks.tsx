@@ -95,7 +95,7 @@ export function MyDecksPanel() {
         <h2 className={styles.boxHead}>Crear mazo</h2>
         <div className={styles.boxBody}>
           <p className={styles.muted} style={{ marginTop: 0 }}>
-            Guarda listas para Pokémon o Mitos y Leyendas. Después eliges el juego.
+            Guarda listas de Pokémon para Challenge y Cup. MyL vuelve pronto.
           </p>
           <Link to="/mazos/nuevo" className={styles.btnPrimary} style={{ textDecoration: "none", display: "inline-block" }}>
             Crear mazo

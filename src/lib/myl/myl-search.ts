@@ -10,16 +10,29 @@ export type MylCardSearchResult = {
   editionSlug?: string;
   edid?: string;
   image?: string;
+  era?: string | null;
+  race?: string | null;
 };
 
 export async function searchMylCardsClient(opts: {
-  query: string;
+  query?: string;
   type?: string;
+  era?: string;
+  race?: string;
+  deckFormat?: string;
 }): Promise<{ cards: MylCardSearchResult[]; error?: string }> {
-  const q = opts.query.trim();
-  if (q.length < 2) return { cards: [] };
-  const params = new URLSearchParams({ q });
+  const q = String(opts.query || "").trim();
+  const race = String(opts.race || "").trim();
+  const deckFormat = String(opts.deckFormat || "soporte-libre").trim();
+  const isLibre = deckFormat === "libre";
+  if (q.length < 2 && !race && !isLibre) return { cards: [] };
+  if (q.length < 2 && isLibre && !opts.era) return { cards: [] };
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
   if (opts.type && opts.type !== "all") params.set("type", opts.type);
+  if (opts.era) params.set("era", opts.era);
+  if (race) params.set("race", race);
+  if (deckFormat) params.set("deckFormat", deckFormat);
   try {
     const res = await fetch(`/api/store/myl/cards/search?${params}`);
     const data = (await res.json()) as { ok?: boolean; cards?: MylCardSearchResult[]; error?: string };

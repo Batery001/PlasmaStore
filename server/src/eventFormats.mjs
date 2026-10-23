@@ -58,9 +58,21 @@ export const MYL_EVENT_TYPES = [
 ];
 
 export const MYL_DECK_FORMATS = [
-  { slug: "racial", name: "Racial" },
-  { slug: "soporte-libre", name: "Racial soporte libre" },
-  { slug: "libre", name: "Libre / Full" },
+  {
+    slug: "racial",
+    name: "Racial soporte edición",
+    hint: "Aliados de una raza; Armas/Tótems/Talismanes/Oros solo de la edición hogar. Mín. 16 Aliados.",
+  },
+  {
+    slug: "soporte-libre",
+    name: "Racial soporte libre",
+    hint: "Aliados de una raza; soporte de cualquier edición del formato. Mín. 16 Aliados.",
+  },
+  {
+    slug: "libre",
+    name: "Libre / Full",
+    hint: "Podés mezclar razas y soporte de todo el formato (50 cartas, máx. 3 copias).",
+  },
 ];
 
 export const MYL_RACES_PRIMERA_ERA = [
@@ -87,13 +99,13 @@ export const MYL_RACES_PRIMER_BLOQUE = [
   { slug: "defensor", name: "Defensor" },
   { slug: "desafiante", name: "Desafiante" },
   { slug: "dragon", name: "Dragón" },
-  { slug: "druida", name: "Druida" },
+  { slug: "druida", name: "Druida (Defensor)" },
   { slug: "eterno", name: "Eterno" },
   { slug: "faerie", name: "Faerie" },
   { slug: "faraon", name: "Faraón" },
-  { slug: "goblin", name: "Goblin" },
+  { slug: "goblin", name: "Goblin (Faerie)" },
   { slug: "heroe", name: "Héroe" },
-  { slug: "minotauro", name: "Minotauro" },
+  { slug: "minotauro", name: "Minotauro (Titán)" },
   { slug: "olimpico", name: "Olímpico" },
   { slug: "sacerdote", name: "Sacerdote" },
   { slug: "sombra", name: "Sombra" },
@@ -133,9 +145,17 @@ export function normalizeMylEventType(raw) {
 export function normalizeMylDeckFormat(raw) {
   const s = fold(raw);
   if (!s) return "";
-  if (s.includes("soporte") || s.includes("libre-racial")) return "soporte-libre";
-  if (s === "libre" || s.includes("full") || s.includes("mixto")) return "libre";
-  if (s.includes("racial")) return "racial";
+  // Orden: soporte-libre antes que libre (porque "soporte-libre" contiene "libre")
+  if (
+    s === "soporte-libre" ||
+    s === "racial-soporte-libre" ||
+    s.includes("libre-racial") ||
+    (s.includes("soporte") && s.includes("libre"))
+  ) {
+    return "soporte-libre";
+  }
+  if (s === "libre" || s === "full" || s.includes("full") || s.includes("mixto")) return "libre";
+  if (s === "racial" || s.includes("edicion") || s.includes("racial")) return "racial";
   return MYL_DECK_FORMATS.some((x) => x.slug === s) ? s : "";
 }
 

@@ -1,5 +1,8 @@
 export type DeckGame = "pokemon" | "mitos-y-leyendas";
 
+/** Mientras el builder MyL no esté listo: no ofrecer crear mazos MyL en la UI. */
+export const MYL_DECK_CREATION_ENABLED = false;
+
 export function normalizeDeckGame(raw: unknown): DeckGame {
   const s = String(raw || "")
     .trim()
