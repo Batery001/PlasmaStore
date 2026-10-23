@@ -1,7 +1,7 @@
 {
   "name": "plasma-store",
   "private": true,
-  "version": "1.17.2",
+  "version": "1.18.0",
   "type": "module",
   "scripts": {
     "dev": "next dev -p 3000",
@@ -13,6 +13,7 @@
     "check-env": "node server/scripts/check-env.mjs",
     "db-ping": "node server/scripts/db-ping.mjs",
     "mongo-ping": "node server/scripts/db-ping.mjs",
+    "reset-store-data": "node server/scripts/reset-store-data.mjs",
     "lint": "eslint ."
   },
   "dependencies": {

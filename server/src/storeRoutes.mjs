@@ -30,7 +30,9 @@ import {
 import {
   buildTuuPayload,
   collectTuuParams,
+  isHttpsUrl,
   normalizePhoneCl,
+  requestTuuPaymentUrl,
   resolveTuuCredentials,
   signTuuParams,
   signaturesMatch,
@@ -2434,11 +2436,15 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
           await releaseReservationsForOrder(db, orderId, "tuu_disabled");
           return res.status(400).json({ ok: false, error: "TUU Pago Online no está habilitado." });
         }
-        if (tuu.mode === "production" && (!tuu.accountId || !tuu.secret)) {
-          await releaseReservationsForOrder(db, orderId, "tuu_missing_keys");
+        if (tuu.error) {
+          await releaseReservationsForOrder(db, orderId, "tuu_config_error");
+          return res.status(400).json({ ok: false, error: tuu.error });
+        }
+        if (tuu.mode === "production" && !isHttpsUrl(base)) {
+          await releaseReservationsForOrder(db, orderId, "tuu_https_required");
           return res.status(400).json({
             ok: false,
-            error: "Faltan RUT/account_id y clave secreta de TUU (Admin → Sistema de pago).",
+            error: "En producción TUU exige URL pública HTTPS (Admin → Sistema de pago → URL pública).",
           });
         }
         const names = splitCustomerName(recipient || buyerEmail.split("@")[0]);
@@ -2458,6 +2464,18 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
           completeUrl: `${base}/api/store/checkout/tuu/complete`,
         });
         fields.x_signature = signTuuParams(fields, tuu.secret);
+
+        // Preferir payment intent por API (URL directa). Si falla, POST form firmado.
+        const intent = await requestTuuPaymentUrl(tuu.endpoint, fields);
+        if (tuu.mode === "production" && intent.error && !intent.url) {
+          await releaseReservationsForOrder(db, orderId, "tuu_intent_failed");
+          return res.status(502).json({
+            ok: false,
+            error: intent.error,
+            detail: intent.detail || undefined,
+          });
+        }
+
         const nowTuu = new Date();
         await db.collection("store_orders").insertOne({
           ...orderBase,
@@ -2465,9 +2483,10 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
             provider: "tuu",
             buyOrder: reference,
             reference,
-            url: tuu.endpoint,
+            url: intent.url || tuu.endpoint,
             mode: tuu.mode,
             using_test: tuu.usingTest,
+            intent_status: intent.status || null,
           },
           createdAt: nowTuu,
           updatedAt: nowTuu,
@@ -2476,6 +2495,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
           ok: true,
           provider: "tuu",
           orderId,
+          url: intent.url || null,
           action: tuu.endpoint,
           fields,
           fulfillment,
@@ -4932,21 +4952,32 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
           return res.status(400).json({ ok: false, error: "URL pública debe empezar con http:// o https://" });
         }
       }
-      const cfg = await savePaymentSettings(db, {
-        mode: body.mode,
-        commerce_code: body.commerce_code,
-        api_key: body.api_key,
-        public_base_url: body.public_base_url,
-        tuu_enabled: body.tuu_enabled,
-        tuu_mode: body.tuu_mode,
-        tuu_account_id: body.tuu_account_id,
-        tuu_secret: body.tuu_secret,
-      });
-      res.json({
-        ok: true,
-        payments: publicPaymentSettingsView(cfg),
-        message: "Guardado. Webpay y TUU actualizados.",
-      });
+      try {
+        const cfg = await savePaymentSettings(db, {
+          mode: body.mode,
+          commerce_code: body.commerce_code,
+          api_key: body.api_key,
+          public_base_url: body.public_base_url,
+          tuu_enabled: body.tuu_enabled,
+          tuu_mode: body.tuu_mode,
+          tuu_account_id: body.tuu_account_id,
+          tuu_secret: body.tuu_secret,
+        });
+        res.json({
+          ok: true,
+          payments: publicPaymentSettingsView(cfg),
+          message: "Guardado. TUU actualizado.",
+        });
+      } catch (saveErr) {
+        const status = Number(/** @type {any} */ (saveErr)?.status) || 500;
+        if (status >= 400 && status < 500) {
+          return res.status(status).json({
+            ok: false,
+            error: saveErr instanceof Error ? saveErr.message : "No se pudo guardar.",
+          });
+        }
+        throw saveErr;
+      }
     } catch (e) {
       handleErr(res, e);
     }

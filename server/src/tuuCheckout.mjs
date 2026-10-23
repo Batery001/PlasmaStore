@@ -6,8 +6,9 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const TUU_SETTINGS_FIELDS = ["tuu_enabled", "tuu_mode", "tuu_account_id", "tuu_secret"];
 
-const TEST_ACCOUNT_ID = "62224230";
-const TEST_SECRET =
+/** Credenciales públicas de integración (solo haulmer.dev). */
+export const TEST_ACCOUNT_ID = "62224230";
+export const TEST_SECRET =
   "yAk0dXTJLQzkeEWODsQWVpPX0bn7ND50qwoQrXgqqNiUyEpgxIPxPtoCgKeLNeh1upTw72JZx5O9x5IaAtPIGUAVcMNcsUSg3M0M8tgWdUb4F8qkS8I7rHpOUmZqzvfS";
 
 export const TUU_ENDPOINTS = {
@@ -140,14 +141,41 @@ export function buildTuuPayload(input) {
 }
 
 /**
+ * @param {string} url
+ */
+export function isHttpsUrl(url) {
+  return /^https:\/\//i.test(String(url || "").trim());
+}
+
+/**
  * @param {Awaited<ReturnType<import("./paymentSettings.mjs").readPaymentSettings>>} cfg
  */
 export function resolveTuuCredentials(cfg) {
   const enabled = cfg.tuu_enabled !== false;
   const mode = normalizeTuuMode(cfg.tuu_mode);
   const customId = String(cfg.tuu_account_id || "").trim();
-  const customSecret = String(cfg.tuu_secret || "").trim();
-  const usingTest = mode !== "production" && (!customId || !customSecret);
+  const customSecret = String(cfg.tuu_secret || "").trim().replace(/\s+/g, "");
+
+  if (mode === "production") {
+    let error = null;
+    if (!customId || !customSecret) {
+      error = "Faltan account_id y clave secreta de TUU producción (Admin → Sistema de pago).";
+    } else if (customId === TEST_ACCOUNT_ID || customSecret === TEST_SECRET) {
+      error = "En producción no se pueden usar las claves de prueba de Haulmer. Pedí a TUU el account_id y secret reales.";
+    }
+    return {
+      enabled,
+      mode,
+      accountId: customId,
+      secret: customSecret,
+      usingTest: false,
+      endpoint: TUU_ENDPOINTS.production,
+      ready_for_live: !error,
+      error,
+    };
+  }
+
+  const usingTest = !customId || !customSecret;
   const accountId = usingTest ? TEST_ACCOUNT_ID : customId;
   const secret = usingTest ? TEST_SECRET : customSecret;
   return {
@@ -156,22 +184,48 @@ export function resolveTuuCredentials(cfg) {
     accountId,
     secret,
     usingTest,
-    endpoint: tuuEndpoint(mode),
-    ready_for_live: mode === "production" && Boolean(customId) && Boolean(customSecret),
+    endpoint: TUU_ENDPOINTS.integration,
+    ready_for_live: false,
+    error: null,
   };
 }
 
 /**
- * Intenta crear el intento por API JSON. Si TUU responde una URL, el cliente navega ahí.
- * Si no, el checkout hace POST del formulario firmado (estilo Jumpseller).
+ * Extrae URL de pago desde respuesta TUU (JSON o Location).
+ * @param {unknown} json
+ * @param {Headers} headers
+ */
+function extractTuuPaymentUrl(json, headers) {
+  const fromJson =
+    json &&
+    typeof json === "object" &&
+    (/** @type {any} */ (json).url ||
+      /** @type {any} */ (json).redirect_url ||
+      /** @type {any} */ (json).payment_url ||
+      /** @type {any} */ (json).checkout_url ||
+      /** @type {any} */ (json).data?.url ||
+      /** @type {any} */ (json).payment?.url ||
+      /** @type {any} */ (json).paymentIntent?.url ||
+      /** @type {any} */ (json).payment_intent?.url);
+  if (typeof fromJson === "string" && /^https?:\/\//i.test(fromJson.trim())) return fromJson.trim();
+  const loc = headers.get("location") || headers.get("Location") || "";
+  if (/^https?:\/\//i.test(loc)) return loc.trim();
+  return null;
+}
+
+/**
+ * Crea el payment intent por API JSON (recomendado).
+ * Si TUU responde una URL, el cliente navega ahí; si no, se usa POST del formulario firmado.
  * @param {string} endpoint
  * @param {Record<string, string>} fields
+ * @returns {Promise<{ url: string | null, ok: boolean, status: number, error: string | null, detail: string | null }>}
  */
 export async function requestTuuPaymentUrl(endpoint, fields) {
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 15000);
+  const t = setTimeout(() => controller.abort(), 20000);
   try {
-    const body = { ...fields, x_amount: Number(fields.x_amount) };
+    const amountNum = Math.round(Number(fields.x_amount) || 0);
+    const body = { ...fields, x_amount: amountNum };
     const r = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -181,6 +235,7 @@ export async function requestTuuPaymentUrl(endpoint, fields) {
       },
       body: JSON.stringify(body),
       signal: controller.signal,
+      redirect: "manual",
     });
     const text = await r.text();
     let json = null;
@@ -189,22 +244,44 @@ export async function requestTuuPaymentUrl(endpoint, fields) {
     } catch {
       json = null;
     }
-    const url =
-      (json &&
-        (json.url ||
-          json.redirect_url ||
-          json.payment_url ||
-          json.checkout_url ||
-          json.data?.url ||
-          json.payment?.url)) ||
-      "";
-    if (typeof url === "string" && /^https?:\/\//i.test(url.trim())) return url.trim();
-    const loc = r.headers.get("location") || r.headers.get("Location") || "";
-    if (/^https?:\/\//i.test(loc)) return loc;
-    return null;
+    const url = extractTuuPaymentUrl(json, r.headers);
+    if (url) {
+      return { url, ok: true, status: r.status, error: null, detail: null };
+    }
+
+    const msg =
+      (json && typeof json === "object" && (/** @type {any} */ (json).message || /** @type {any} */ (json).error || /** @type {any} */ (json).detail)) ||
+      null;
+    const detail = String(msg || text || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 280);
+    const looksAuth =
+      r.status === 401 ||
+      r.status === 403 ||
+      /secret|account|credencial|llave|firma|signature|invalid/i.test(detail);
+
+    let error = null;
+    if (r.status >= 400 || looksAuth) {
+      error = looksAuth
+        ? "TUU rechazó las credenciales (account_id / secret). Revisa Admin → Sistema de pago."
+        : `TUU no pudo crear el pago (HTTP ${r.status}).`;
+    }
+
+    if (detail) {
+      console.warn("[tuu] payment intent sin URL", { status: r.status, detail: detail.slice(0, 160) });
+    }
+    return { url: null, ok: false, status: r.status, error, detail: detail || null };
   } catch (e) {
-    console.warn("[tuu] payment intent", e instanceof Error ? e.message : e);
-    return null;
+    const msg = e instanceof Error ? e.message : String(e);
+    console.warn("[tuu] payment intent", msg);
+    return {
+      url: null,
+      ok: false,
+      status: 0,
+      error: msg.includes("abort") ? "TUU no respondió a tiempo. Intenta de nuevo." : "No se pudo contactar a TUU.",
+      detail: msg,
+    };
   } finally {
     clearTimeout(t);
   }

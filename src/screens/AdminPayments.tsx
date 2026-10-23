@@ -110,8 +110,8 @@ export function AdminPayments() {
             }}
           >
             {tuuReady
-              ? "TUU listo en producción: account_id + secret reales."
-              : "TUU en pruebas usa las credenciales de integración de Haulmer. Pedí a TUU el account_id y el secret para cobrar de verdad."}
+              ? "TUU listo en producción: account_id + secret reales + HTTPS."
+              : "En pruebas se usan claves públicas de Haulmer. Para cobrar de verdad: modo Producción + account_id/secret que te dio TUU + URL https://plasmastoretcg.cl"}
           </div>
 
           <label className={adminStyles.label} style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>

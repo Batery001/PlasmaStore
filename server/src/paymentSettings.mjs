@@ -2,7 +2,7 @@
  * Configuración de pagos (Webpay + TUU) persistida en DB.
  * Prioridad: ajustes del admin → variables de entorno.
  */
-import { normalizeTuuMode } from "./tuuCheckout.mjs";
+import { normalizeTuuMode, TEST_ACCOUNT_ID } from "./tuuCheckout.mjs";
 
 export const PAYMENTS_SETTINGS_ID = "payments";
 
@@ -124,9 +124,30 @@ export async function savePaymentSettings(db, body, opts = {}) {
     body.tuu_account_id !== undefined ? String(body.tuu_account_id || "").trim() : prev.tuu_account_id;
   let tuu_secret = prev.tuu_secret;
   if (body.tuu_secret !== undefined) {
-    const incoming = String(body.tuu_secret || "").trim();
+    const incoming = String(body.tuu_secret || "").trim().replace(/\s+/g, "");
     if (incoming) tuu_secret = incoming;
     else if (opts.keepApiKeyIfEmpty === false) tuu_secret = "";
+  }
+
+  if (tuu_mode === "production") {
+    if (!tuu_account_id || !tuu_secret) {
+      throw Object.assign(
+        new Error("Producción TUU requiere account_id y secret reales. Pégalos antes de guardar."),
+        { status: 400 }
+      );
+    }
+    if (tuu_account_id === TEST_ACCOUNT_ID) {
+      throw Object.assign(
+        new Error("No uses el account_id de prueba (62224230) en producción. Pedí a TUU tus claves reales."),
+        { status: 400 }
+      );
+    }
+    if (public_base_url && !/^https:\/\//i.test(public_base_url)) {
+      throw Object.assign(
+        new Error("En producción la URL pública debe ser HTTPS (ej. https://plasmastoretcg.cl)."),
+        { status: 400 }
+      );
+    }
   }
 
   const now = new Date();
