@@ -23,10 +23,10 @@ type FormRow = {
   reg: string;
 };
 
-/** Filas fijas de la plantilla oficial (cabe en 1 hoja landscape). */
+/** Filas fijas de la plantilla oficial (1 hoja Letter landscape). */
 const POKEMON_SLOTS = 12;
-const TRAINER_SLOTS = 18;
-const ENERGY_SLOTS = 5;
+const TRAINER_SLOTS = 16;
+const ENERGY_SLOTS = 4;
 
 function padRows(rows: FormRow[], slots: number): FormRow[] {
   const empty = (): FormRow => ({ qty: "", name: "", set: "", coll: "", reg: "" });
@@ -336,8 +336,8 @@ export function DeckPdf() {
           </button>
         </div>
         <p className={styles.muted} style={{ fontSize: 13, margin: 0 }}>
-          Una sola hoja (Letter landscape), estilo lista oficial / Substitute List. En el diálogo: márgenes
-          mínimos y «Guardar como PDF».
+          Una sola hoja Letter horizontal (como Substitute List). En el diálogo de impresión: orientación
+          horizontal, márgenes «Ninguno» y «Guardar como PDF».
         </p>
         {overflowWarn ? (
           <p className={styles.error} style={{ fontSize: 13, margin: "0.35rem 0 0" }}>
@@ -424,7 +424,7 @@ export function DeckPdf() {
 }
 
 const decklistCss = `
-  .dl-page { max-width: 1100px; margin: 0 auto; }
+  .dl-page { max-width: 1200px; margin: 0 auto; }
   .dl-toolbar { margin-bottom: 1rem; }
   .dl-toolbar-row {
     display: flex; flex-wrap: wrap; gap: 0.55rem; align-items: end; margin-bottom: 0.45rem;
@@ -437,17 +437,18 @@ const decklistCss = `
     border-radius: 8px;
   }
   .dl-sheet {
-    width: 10.5in;
-    height: 7.6in;
+    width: 11in;
+    height: 8.5in;
+    max-height: 8.5in;
     margin: 0 auto;
     box-sizing: border-box;
     background: #fff;
     color: #111;
     border: 1.5px solid #111;
-    padding: 0.18in 0.2in 0.12in;
+    padding: 0.12in 0.16in 0.08in;
     font-family: Arial, Helvetica, sans-serif;
-    font-size: 8.5pt;
-    line-height: 1.15;
+    font-size: 7.5pt;
+    line-height: 1.05;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -455,95 +456,105 @@ const decklistCss = `
   .dl-title {
     text-align: center;
     font-weight: 700;
-    font-size: 11pt;
-    margin-bottom: 0.08in;
+    font-size: 10pt;
+    margin: 0 0 0.05in;
+    flex: 0 0 auto;
   }
-  .dl-top { margin-bottom: 0.08in; }
-  .dl-formats { margin-bottom: 0.06in; }
+  .dl-top { margin-bottom: 0.05in; flex: 0 0 auto; }
+  .dl-formats { margin-bottom: 0.04in; }
   .dl-player {
     display: grid;
     grid-template-columns: 1.35fr 0.85fr 1.1fr;
-    gap: 0.12in;
-    margin-bottom: 0.06in;
+    gap: 0.1in;
+    margin-bottom: 0.04in;
   }
-  .dl-field-label { font-weight: 700; font-size: 8pt; display: block; }
+  .dl-field-label { font-weight: 700; font-size: 7pt; display: block; }
   .dl-field-line {
     display: block;
     border-bottom: 1px solid #111;
-    min-height: 14px;
-    padding-top: 1px;
-    font-size: 9pt;
+    min-height: 11px;
+    padding-top: 0;
+    font-size: 8pt;
+    line-height: 1.1;
   }
-  .dl-age { font-size: 8pt; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; }
-  .dl-check { display: inline-flex; align-items: center; gap: 4px; margin-right: 8px; white-space: nowrap; }
+  .dl-age { font-size: 7pt; display: flex; flex-wrap: wrap; align-items: center; gap: 1px 8px; }
+  .dl-check { display: inline-flex; align-items: center; gap: 3px; margin-right: 6px; white-space: nowrap; }
   .dl-box {
-    width: 10px; height: 10px; border: 1.2px solid #111;
+    width: 9px; height: 9px; border: 1.2px solid #111;
     display: inline-flex; align-items: center; justify-content: center;
-    font-size: 8px; font-weight: 700; flex: 0 0 auto;
+    font-size: 7px; font-weight: 700; flex: 0 0 auto;
   }
   .dl-body {
-    flex: 1;
+    flex: 1 1 auto;
     display: grid;
-    grid-template-columns: 2.15in 1fr;
-    gap: 0.14in;
+    grid-template-columns: 2in 1fr;
+    gap: 0.1in;
     min-height: 0;
+    overflow: hidden;
   }
   .dl-legend {
     border: 1px solid #111;
     background: #f3f3f3;
-    padding: 0.06in;
-    font-size: 6.5pt;
+    padding: 0.05in;
+    font-size: 5.5pt;
     display: flex;
     flex-direction: column;
-    gap: 0.05in;
+    gap: 0.04in;
     overflow: hidden;
+    min-height: 0;
   }
-  .dl-legend-title { font-weight: 700; font-size: 7.5pt; margin-bottom: 2px; }
-  .dl-legend-block { background: #fff; border: 1px solid #bbb; padding: 3px 4px; }
-  .dl-legend-series { font-weight: 700; margin-bottom: 1px; }
-  .dl-legend-codes { word-spacing: 0.15em; line-height: 1.25; }
+  .dl-legend-title { font-weight: 700; font-size: 6.5pt; margin-bottom: 1px; }
+  .dl-legend-block { background: #fff; border: 1px solid #bbb; padding: 2px 3px; }
+  .dl-legend-series { font-weight: 700; margin-bottom: 0; }
+  .dl-legend-codes { word-spacing: 0.12em; line-height: 1.15; }
   .dl-admin {
     margin-top: auto;
     background: #333;
     color: #fff;
     font-weight: 700;
-    font-size: 6.5pt;
+    font-size: 5.5pt;
     letter-spacing: 0.04em;
     text-align: center;
-    padding: 4px 2px;
+    padding: 3px 2px;
   }
   .dl-tables {
     display: flex;
     flex-direction: column;
-    gap: 0.06in;
+    gap: 0.04in;
     min-height: 0;
+    overflow: hidden;
   }
-  .dl-table-wrap { min-height: 0; }
+  .dl-table-wrap { min-height: 0; flex: 0 0 auto; }
   .dl-table-head {
     display: flex;
     justify-content: space-between;
     font-weight: 700;
-    font-size: 8.5pt;
-    margin-bottom: 1px;
+    font-size: 7.5pt;
+    margin-bottom: 0;
+    line-height: 1.1;
   }
   .dl-table {
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;
-    font-size: 7.5pt;
+    font-size: 6.5pt;
   }
   .dl-table th {
     border: 1px solid #111;
     background: #222;
     color: #fff;
     font-weight: 700;
-    padding: 1px 2px;
+    padding: 0 2px;
+    height: 11px;
+    line-height: 11px;
     text-align: center;
   }
   .dl-table td {
     border: 1px solid #111;
-    height: 13px;
+    height: 11px;
+    max-height: 11px;
     padding: 0 2px;
+    line-height: 10px;
     text-align: center;
     vertical-align: middle;
     overflow: hidden;
@@ -560,38 +571,59 @@ const decklistCss = `
   .dl-simple .c-qty { width: 10%; }
   .dl-simple .c-name { width: 90%; }
   .dl-footnote {
-    margin: 0.06in 0 0;
-    font-size: 6pt;
+    margin: 0.04in 0 0;
+    font-size: 5.5pt;
     color: #333;
-    line-height: 1.2;
+    line-height: 1.15;
+    flex: 0 0 auto;
   }
 
   @media print {
+    @page {
+      size: letter landscape;
+      margin: 0;
+    }
     .deck-pdf-no-print { display: none !important; }
     html, body {
       background: #fff !important;
       color: #000 !important;
       margin: 0 !important;
       padding: 0 !important;
+      width: 11in !important;
+      height: 8.5in !important;
+      overflow: hidden !important;
     }
-    .dl-page { max-width: none !important; margin: 0 !important; }
+    body * { visibility: hidden !important; }
+    .dl-sheet,
+    .dl-sheet * { visibility: visible !important; }
+    header, footer, nav { display: none !important; }
+    .dl-page {
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
     .dl-sheet-outer {
       background: transparent !important;
       padding: 0 !important;
       border-radius: 0 !important;
-      overflow: visible !important;
+      overflow: hidden !important;
+      margin: 0 !important;
     }
     .dl-sheet {
-      width: 10.5in !important;
-      height: 7.6in !important;
-      margin: 0 auto !important;
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: 11in !important;
+      height: 8.5in !important;
+      max-height: 8.5in !important;
+      margin: 0 !important;
       border: 1px solid #111 !important;
+      overflow: hidden !important;
+      page-break-after: avoid !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
-    }
-    @page {
-      size: letter landscape;
-      margin: 0.25in;
     }
   }
 `;
