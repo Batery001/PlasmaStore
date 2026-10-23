@@ -1,12 +1,12 @@
 /**
  * Mazos del usuario (Pokémon + Mitos y Leyendas).
- * CRUD + parse Pokémon + búsqueda de cartas (pokemontcg.io).
+ * CRUD + parse Pokémon + búsqueda de cartas (TCGdex; incluye MEP/promos).
  */
 import { nextSeq } from "../counters.mjs";
 import { clientKey, rateLimit } from "../rateLimit.mjs";
 import { parseAndEnrichPokemonDecklist } from "./enrichCategories.mjs";
 import { toStoredParsedCards } from "./deckParser.mjs";
-import { searchPokemontcgCards } from "./pokemontcgSearch.mjs";
+import { searchTcgdexCards } from "./tcgdexSearch.mjs";
 import { mylMeta, searchMylCards } from "../myl/mylSearch.mjs";
 import { normalizeMylDeckFormat, normalizeMylEra, normalizeMylRace } from "../eventFormats.mjs";
 
@@ -314,7 +314,7 @@ export function mountDeckRoutes(app, { getDb, requireUser, handleErr }) {
       const format =
         formatRaw === "expanded" || formatRaw === "glc" ? formatRaw : "standard";
 
-      const cards = await searchPokemontcgCards({ query: q, type, format });
+      const cards = await searchTcgdexCards({ query: q, type, format });
       res.json({ ok: true, cards });
     } catch (e) {
       handleErr(res, e);
