@@ -254,6 +254,12 @@ export function DeckEdit() {
 
       <p className={styles.muted}>
         <Link to="/perfil?tab=mazos">← Mis mazos</Link>
+        {!isNew && isPokemon && deckId ? (
+          <>
+            {" · "}
+            <Link to={`/mazos/${deckId}/pdf`}>Ver PDF</Link>
+          </>
+        ) : null}
       </p>
       <h1 className={styles.pageTitle} data-tour="deck-tour-title">
         {isNew ? "Crear mazo" : "Editar mazo"} · {deckGameLabel(game!)}

@@ -45,7 +45,12 @@ function DeckSection({
                     : `${d.cardCount} línea${d.cardCount === 1 ? "" : "s"} guardada${d.cardCount === 1 ? "" : "s"}`}
                 </div>
               </div>
-              <div className={styles.orderRight}>
+              <div className={styles.orderRight} style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {isPokemon ? (
+                  <Link className={styles.btnGhost} to={`/mazos/${d.id}/pdf`}>
+                    Ver PDF
+                  </Link>
+                ) : null}
                 <Link className={styles.btnGhost} to={`/mazos/${d.id}`}>
                   Editar
                 </Link>

@@ -23,6 +23,7 @@ const VerifyEmail = lazy(() => import("../screens/VerifyEmail").then((m) => ({ d
 const LegalPage = lazy(() => import("../screens/LegalPage").then((m) => ({ default: m.LegalPage })));
 const MyDecks = lazy(() => import("../screens/MyDecks").then((m) => ({ default: m.MyDecks })));
 const DeckEdit = lazy(() => import("../screens/DeckEdit").then((m) => ({ default: m.DeckEdit })));
+const DeckPdf = lazy(() => import("../screens/DeckPdf").then((m) => ({ default: m.DeckPdf })));
 
 function Lazy({ children }: { children: ReactNode }) {
   return (
@@ -131,6 +132,14 @@ export const storeRoutes: RouteObject[] = [
         element: (
           <Lazy>
             <DeckEdit />
+          </Lazy>
+        ),
+      },
+      {
+        path: "mazos/:id/pdf",
+        element: (
+          <Lazy>
+            <DeckPdf />
           </Lazy>
         ),
       },
