@@ -12,7 +12,6 @@ import {
   type DeckFormat,
   type DeckTypeFilter,
 } from "../../lib/pokemon/deck-builder";
-import { searchTcgdexCards } from "../../lib/pokemon/tcgdex-search";
 import { tcgdxImageVariants } from "../../lib/pokemon/tcgdex-image";
 import styles from "../../screens/pages.module.css";
 
@@ -116,13 +115,20 @@ export function DeckBuilder({
     setSearching(true);
     setSearchError(null);
     try {
-      // TCGdex en cliente: incluye MEP/promos (pokemontcg.io no tiene ese set).
-      const cards = await searchTcgdexCards({
-        query: query.trim(),
+      // Búsqueda en el servidor (TCGdex): incluye MEP/MEE y evita bloqueos CORS del navegador.
+      const params = new URLSearchParams({
+        q: query.trim(),
         type: typeFilter,
         format,
       });
-      setResults(cards);
+      const res = await fetch(`/api/store/cards/search?${params}`);
+      const data = (await res.json()) as { cards?: CardSearchResult[]; error?: string };
+      if (!res.ok) {
+        setResults([]);
+        setSearchError(data.error ?? "No se pudo buscar cartas");
+        return;
+      }
+      setResults(data.cards ?? []);
     } catch {
       setResults([]);
       setSearchError("Error de red al buscar cartas");

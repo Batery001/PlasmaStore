@@ -55,8 +55,17 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   }
 }
 
+function cardSetId(card: TcgdexFull): string {
+  return String(card.set?.id || parseTcgdexCardId(card.id)?.tcgdexSetId || "").toLowerCase();
+}
+
+/** Promos Mega Evolution: a veces la API tarda en marcar `legal.standard`. */
+function isCurrentPromoSet(setId: string): boolean {
+  return setId === "mep" || setId === "mee";
+}
+
 /**
- * Standard: solo Pokémon en rotación (`legal.standard`).
+ * Standard: Pokémon en rotación (`legal.standard`) + promos MEP/MEE.
  * Entrenadores y energías: todas las impresiones (regla de reimpresión).
  */
 function passesFormat(card: TcgdexFull, format: DeckFormat): boolean {
@@ -65,9 +74,20 @@ function passesFormat(card: TcgdexFull, format: DeckFormat): boolean {
   const category = tcgdxCategoryToDeck(card.category);
   if (category === "trainer" || category === "energy") return true;
 
-  // Sin dato de legalidad: no inventar Standard (sí dejamos Expanded/GLC vía otros caminos).
-  if (!card.legal) return format !== "standard";
-  if (format === "standard") return card.legal.standard === true;
+  const setId = cardSetId(card);
+  const reg = String(card.regulationMark || "").trim().toUpperCase();
+
+  if (format === "standard") {
+    if (card.legal?.standard === true) return true;
+    // MEP/MEE vigentes (marca H/I/J o sin marca aún)
+    if (isCurrentPromoSet(setId) && (!reg || reg === "H" || reg === "I" || reg === "J")) return true;
+    // SVP solo si la API dice legal o marca actual (G ya rotó)
+    if (setId === "svp" && (reg === "H" || reg === "I" || reg === "J")) return true;
+    return false;
+  }
+
+  if (card.legal?.expanded === true) return true;
+  if (!card.legal) return true;
   return card.legal.expanded === true;
 }
 
@@ -76,7 +96,8 @@ function briefToResult(card: TcgdexFull): CardSearchResult {
   const tcgdexSetId = card.set?.id ?? parsed?.tcgdexSetId;
   const number = card.localId ?? parsed?.localId;
   const setCode = tcgdexSetId ? tcgdexSetToLimitless(tcgdexSetId) ?? tcgdexSetId.toUpperCase() : undefined;
-  const image = buildTcgdexImageUrl(card);
+  // Preferir imagen ya enriquecida (p. ej. arte prestado de otra impresión).
+  const image = card.image?.trim() || buildTcgdexImageUrl(card);
 
   return {
     id: card.id,

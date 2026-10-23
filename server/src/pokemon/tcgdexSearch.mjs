@@ -72,12 +72,31 @@ function buildImageUrl(card) {
   return `https://assets.tcgdex.net/en/${seriesFromSetId(setId)}/${setId}/${localId}`;
 }
 
+function cardSetId(card) {
+  return String(card.set?.id || parseCardId(card.id)?.setId || "").toLowerCase();
+}
+
+function isCurrentPromoSet(setId) {
+  return setId === "mep" || setId === "mee";
+}
+
 function passesFormat(card, format) {
   if (format === "glc") return true;
   const cat = toDeckCategory(card.category);
   if (cat === "trainer" || cat === "energy") return true;
-  if (!card.legal) return format !== "standard";
-  if (format === "standard") return card.legal.standard === true;
+
+  const setId = cardSetId(card);
+  const reg = String(card.regulationMark || "").trim().toUpperCase();
+
+  if (format === "standard") {
+    if (card.legal?.standard === true) return true;
+    if (isCurrentPromoSet(setId) && (!reg || reg === "H" || reg === "I" || reg === "J")) return true;
+    if (setId === "svp" && (reg === "H" || reg === "I" || reg === "J")) return true;
+    return false;
+  }
+
+  if (card.legal?.expanded === true) return true;
+  if (!card.legal) return true;
   return card.legal.expanded === true;
 }
 
@@ -120,7 +139,7 @@ function toResult(card) {
     category: toDeckCategory(card.category),
     setCode,
     number,
-    image: buildImageUrl(card),
+    image: (card.image && String(card.image).trim()) || buildImageUrl(card),
   };
 }
 
@@ -176,10 +195,21 @@ export async function searchTcgdexCards(options) {
     }
   }
 
+  // Prestar arte de otra impresión cuando la promo no tiene imagen en el CDN.
+  const withArt = [...accepted].sort((a, b) => Number(Boolean(b.image)) - Number(Boolean(a.image)));
+  for (const card of withArt) {
+    if (card.image) continue;
+    const name = String(card.name || "")
+      .trim()
+      .toLowerCase();
+    const peer = withArt.find(
+      (p) => p !== card && String(p.name || "").trim().toLowerCase() === name && p.image
+    );
+    if (peer?.image) card.image = peer.image;
+  }
+
   const seen = new Map();
-  const results = accepted
-    .map(toResult)
-    .sort((a, b) => scoreResult(b) - scoreResult(a));
+  const results = withArt.map(toResult).sort((a, b) => scoreResult(b) - scoreResult(a));
 
   for (const card of results) {
     const key = `${card.name}|${card.setCode || ""}|${card.number || ""}`.toLowerCase();
