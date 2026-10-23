@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { normalizeDeckGame } from "../lib/deckGames";
@@ -15,9 +15,23 @@ type DeckDetail = {
 
 type AgeDivision = "junior" | "senior" | "masters" | "";
 
-function padRows<T>(rows: T[], min: number, empty: () => T): T[] {
-  const out = [...rows];
-  while (out.length < min) out.push(empty());
+type FormRow = {
+  qty: string;
+  name: string;
+  set: string;
+  coll: string;
+  reg: string;
+};
+
+/** Filas fijas de la plantilla oficial (cabe en 1 hoja landscape). */
+const POKEMON_SLOTS = 12;
+const TRAINER_SLOTS = 18;
+const ENERGY_SLOTS = 5;
+
+function padRows(rows: FormRow[], slots: number): FormRow[] {
+  const empty = (): FormRow => ({ qty: "", name: "", set: "", coll: "", reg: "" });
+  const out = rows.slice(0, slots);
+  while (out.length < slots) out.push(empty());
   return out;
 }
 
@@ -35,7 +49,6 @@ function formatDob(u: {
 
 function ageDivisionFromYear(year: number | null | undefined): AgeDivision {
   if (!year || !Number.isFinite(year)) return "";
-  // Temporada tipo 2026 (ajusta años oficiales si Play! Pokémon los publica).
   if (year >= 2014) return "junior";
   if (year >= 2010 && year <= 2013) return "senior";
   if (year <= 2009) return "masters";
@@ -51,15 +64,7 @@ function playerDisplayName(u: {
   return full || u.name || "";
 }
 
-type FormRow = {
-  qty: string;
-  name: string;
-  set: string;
-  coll: string;
-  reg: string;
-};
-
-function cardsToPokemonRows(cards: ParsedDeckCard[]): FormRow[] {
+function toPokemonRows(cards: ParsedDeckCard[]): FormRow[] {
   return cards.map((c) => ({
     qty: String(c.qty),
     name: c.name,
@@ -69,36 +74,31 @@ function cardsToPokemonRows(cards: ParsedDeckCard[]): FormRow[] {
   }));
 }
 
-function cardsToSimpleRows(cards: ParsedDeckCard[]): FormRow[] {
+function toSimpleRows(cards: ParsedDeckCard[]): FormRow[] {
   return cards.map((c) => ({
     qty: String(c.qty),
     name: c.name,
-    set: c.setCode || "",
-    coll: c.number || "",
+    set: "",
+    coll: "",
     reg: "",
   }));
 }
 
 function Check({ checked, label }: { checked: boolean; label: string }) {
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, marginRight: 14 }}>
-      <span
-        style={{
-          width: 12,
-          height: 12,
-          border: "1.5px solid #111",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 10,
-          lineHeight: 1,
-          flex: "0 0 auto",
-        }}
-      >
-        {checked ? "X" : ""}
-      </span>
+    <span className="dl-check">
+      <span className="dl-box">{checked ? "X" : ""}</span>
       <span>{label}</span>
     </span>
+  );
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="dl-field">
+      <span className="dl-field-label">{label}</span>
+      <span className="dl-field-line">{value}</span>
+    </div>
   );
 }
 
@@ -106,61 +106,45 @@ function DeckTable({
   title,
   count,
   rows,
-  columns,
+  kind,
 }: {
   title: string;
   count: number;
   rows: FormRow[];
-  columns: "pokemon" | "simple";
+  kind: "pokemon" | "simple";
 }) {
   return (
-    <div style={{ marginBottom: 10 }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          marginBottom: 3,
-          fontWeight: 700,
-          fontSize: 12,
-        }}
-      >
+    <div className="dl-table-wrap">
+      <div className="dl-table-head">
         <span>{title}</span>
         <span>
-          # <span style={{ borderBottom: "1px solid #111", minWidth: 28, display: "inline-block", textAlign: "center" }}>{count || ""}</span>
+          # <b>{count || ""}</b>
         </span>
       </div>
-      <table
-        style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          fontSize: 10,
-          tableLayout: "fixed",
-        }}
-      >
+      <table className={`dl-table ${kind === "pokemon" ? "dl-poke" : "dl-simple"}`}>
         <thead>
           <tr>
-            <th style={thStyle(7)}>QTY</th>
-            <th style={thStyle(columns === "pokemon" ? 48 : 93)}>NAME</th>
-            {columns === "pokemon" ? (
+            <th className="c-qty">QTY</th>
+            <th className="c-name">NAME</th>
+            {kind === "pokemon" ? (
               <>
-                <th style={thStyle(12)}>SET</th>
-                <th style={thStyle(14)}>COLL. #</th>
-                <th style={thStyle(10)}>REG</th>
+                <th className="c-set">SET</th>
+                <th className="c-coll">COLL. #</th>
+                <th className="c-reg">REG</th>
               </>
             ) : null}
           </tr>
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={`${title}-${i}`}>
-              <td style={tdStyle}>{r.qty}</td>
-              <td style={{ ...tdStyle, textAlign: "left", paddingLeft: 4 }}>{r.name}</td>
-              {columns === "pokemon" ? (
+            <tr key={`${title}-${i}`} className={i % 2 ? "alt" : undefined}>
+              <td className="c-qty">{r.qty}</td>
+              <td className="c-name">{r.name}</td>
+              {kind === "pokemon" ? (
                 <>
-                  <td style={tdStyle}>{r.set}</td>
-                  <td style={tdStyle}>{r.coll}</td>
-                  <td style={tdStyle}>{r.reg}</td>
+                  <td className="c-set">{r.set}</td>
+                  <td className="c-coll">{r.coll}</td>
+                  <td className="c-reg">{r.reg}</td>
                 </>
               ) : null}
             </tr>
@@ -171,27 +155,24 @@ function DeckTable({
   );
 }
 
-function thStyle(pct: number): CSSProperties {
-  return {
-    width: `${pct}%`,
-    border: "1px solid #111",
-    background: "#e8e8e8",
-    padding: "2px 3px",
-    fontWeight: 700,
-    textAlign: "center",
-  };
-}
-
-const tdStyle: CSSProperties = {
-  border: "1px solid #111",
-  height: 16,
-  padding: "1px 2px",
-  textAlign: "center",
-  verticalAlign: "middle",
-  overflow: "hidden",
-  whiteSpace: "nowrap",
-  textOverflow: "ellipsis",
-};
+const SET_LEGEND: { series: string; codes: string }[] = [
+  {
+    series: "Scarlet & Violet",
+    codes: "SVI PAL OBF MEW PAR PAF TEF TWM SFA SCR SSP PRE JTG DRI BLK WHT SVE SVP",
+  },
+  {
+    series: "Mega Evolution",
+    codes: "MEG PFL ASC POR MEP MEE",
+  },
+  {
+    series: "Sword & Shield",
+    codes: "SSH RCL DAA VIV BST CRE EVS FST BRS ASR LOR SIT CPA SHF CEL PGO CRZ",
+  },
+  {
+    series: "Promos",
+    codes: "SVP MEP MEE PR-SW PR-SV",
+  },
+];
 
 export function DeckPdf() {
   const { id } = useParams();
@@ -205,6 +186,7 @@ export function DeckPdf() {
   const [playerId, setPlayerId] = useState("");
   const [dob, setDob] = useState("");
   const [division, setDivision] = useState<AgeDivision>("");
+  const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -243,26 +225,41 @@ export function DeckPdf() {
     return parsePokemonDecklist(deck.rawText);
   }, [deck]);
 
-  const pokemonRows = useMemo(() => {
-    const rows = cardsToPokemonRows(parsed?.categories.pokemon || []);
-    return padRows(rows, 14, () => ({ qty: "", name: "", set: "", coll: "", reg: "" }));
+  const pokemonRows = useMemo(
+    () => padRows(toPokemonRows(parsed?.categories.pokemon || []), POKEMON_SLOTS),
+    [parsed]
+  );
+  const trainerRows = useMemo(
+    () => padRows(toSimpleRows(parsed?.categories.trainer || []), TRAINER_SLOTS),
+    [parsed]
+  );
+  const energyRows = useMemo(
+    () => padRows(toSimpleRows(parsed?.categories.energy || []), ENERGY_SLOTS),
+    [parsed]
+  );
+
+  const overflowWarn = useMemo(() => {
+    if (!parsed) return null;
+    const bits: string[] = [];
+    if ((parsed.categories.pokemon?.length || 0) > POKEMON_SLOTS) {
+      bits.push(`Pokémon: ${parsed.categories.pokemon.length} líneas (máx. ${POKEMON_SLOTS} en la hoja)`);
+    }
+    if ((parsed.categories.trainer?.length || 0) > TRAINER_SLOTS) {
+      bits.push(`Trainer: ${parsed.categories.trainer.length} líneas (máx. ${TRAINER_SLOTS})`);
+    }
+    if ((parsed.categories.energy?.length || 0) > ENERGY_SLOTS) {
+      bits.push(`Energy: ${parsed.categories.energy.length} líneas (máx. ${ENERGY_SLOTS})`);
+    }
+    return bits.length ? bits.join(" · ") : null;
   }, [parsed]);
 
-  const trainerRows = useMemo(() => {
-    const rows = cardsToSimpleRows(parsed?.categories.trainer || []);
-    return padRows(rows, 14, () => ({ qty: "", name: "", set: "", coll: "", reg: "" }));
-  }, [parsed]);
-
-  const energyRows = useMemo(() => {
-    const rows = cardsToSimpleRows(parsed?.categories.energy || []);
-    return padRows(rows, 6, () => ({ qty: "", name: "", set: "", coll: "", reg: "" }));
-  }, [parsed]);
+  function handlePrint() {
+    window.print();
+  }
 
   if (authLoading) return <p className={styles.muted}>Cargando…</p>;
   if (!user) {
-    return (
-      <Navigate to="/login" replace state={{ from: { pathname: `/mazos/${id}/pdf` } }} />
-    );
+    return <Navigate to="/login" replace state={{ from: { pathname: `/mazos/${id}/pdf` } }} />;
   }
   if (!Number.isFinite(deckId) || deckId <= 0) {
     return <Navigate to="/perfil?tab=mazos" replace />;
@@ -281,29 +278,19 @@ export function DeckPdf() {
   const totals = parsed?.categories.totals;
 
   return (
-    <div style={{ maxWidth: 820, margin: "0 auto" }}>
-      <style>{`
-        @media print {
-          .deck-pdf-no-print { display: none !important; }
-          html, body { background: #fff !important; color: #000 !important; }
-          .decklist-form {
-            box-shadow: none !important;
-            border: 1px solid #111 !important;
-            margin: 0 !important;
-            max-width: none !important;
-          }
-          @page { size: letter portrait; margin: 10mm; }
-        }
-      `}</style>
+    <div className="dl-page">
+      <style>{decklistCss}</style>
 
-      <div className="deck-pdf-no-print" style={{ marginBottom: "1rem" }}>
+      <div className="deck-pdf-no-print dl-toolbar">
         <p className={styles.muted} style={{ marginTop: 0 }}>
           <Link to="/perfil?tab=mazos">← Mis mazos</Link>
           {" · "}
           <Link to={`/mazos/${deck.id}`}>Editar</Link>
+          {" · "}
+          <strong>{deck.name}</strong>
         </p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.65rem", alignItems: "end", marginBottom: 8 }}>
-          <label className={styles.label} style={{ margin: 0 }}>
+        <div className="dl-toolbar-row">
+          <label className={styles.label}>
             Formato
             <select
               className={styles.input}
@@ -314,16 +301,16 @@ export function DeckPdf() {
               <option value="expanded">Expanded</option>
             </select>
           </label>
-          <label className={styles.label} style={{ margin: 0, minWidth: 180 }}>
+          <label className={styles.label}>
             Player Name
             <input className={styles.input} value={playerName} onChange={(e) => setPlayerName(e.target.value)} />
           </label>
-          <label className={styles.label} style={{ margin: 0, minWidth: 120 }}>
+          <label className={styles.label}>
             Player ID
             <input className={styles.input} value={playerId} onChange={(e) => setPlayerId(e.target.value)} />
           </label>
-          <label className={styles.label} style={{ margin: 0, minWidth: 130 }}>
-            Date of Birth
+          <label className={styles.label}>
+            DOB
             <input
               className={styles.input}
               value={dob}
@@ -331,7 +318,7 @@ export function DeckPdf() {
               placeholder="MM/DD/YYYY"
             />
           </label>
-          <label className={styles.label} style={{ margin: 0 }}>
+          <label className={styles.label}>
             División
             <select
               className={styles.input}
@@ -344,100 +331,267 @@ export function DeckPdf() {
               <option value="masters">Masters</option>
             </select>
           </label>
-          <button type="button" className={styles.btnPrimary} onClick={() => window.print()}>
+          <button type="button" className={styles.btnPrimary} onClick={handlePrint}>
             Imprimir / guardar PDF
           </button>
         </div>
         <p className={styles.muted} style={{ fontSize: 13, margin: 0 }}>
-          Plantilla tipo lista oficial Play! Pokémon. Completá datos si faltan y usá «Guardar como PDF» en el
-          diálogo de impresión. Mazo: <strong>{deck.name}</strong>
+          Una sola hoja (Letter landscape), estilo lista oficial / Substitute List. En el diálogo: márgenes
+          mínimos y «Guardar como PDF».
         </p>
+        {overflowWarn ? (
+          <p className={styles.error} style={{ fontSize: 13, margin: "0.35rem 0 0" }}>
+            La lista tiene más líneas de las que caben en la plantilla: {overflowWarn}. Unificá copias o
+            acortá nombres de set.
+          </p>
+        ) : null}
       </div>
 
       {!isPokemon || !parsed ? (
-        <p className={styles.error}>Esta vista PDF es para mazos Pokémon con lista válida.</p>
+        <p className={styles.error}>Esta vista PDF es para mazos Pokémon.</p>
       ) : (
-        <div
-          className="decklist-form"
-          style={{
-            background: "#fff",
-            color: "#111",
-            border: "2px solid #111",
-            padding: "10px 12px 8px",
-            fontFamily: "Arial, Helvetica, sans-serif",
-            fontSize: 11,
-            lineHeight: 1.25,
-          }}
-        >
-          <div style={{ textAlign: "center", fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
-            Pokémon TCG Tournament Season — Deck List
-          </div>
-
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 16px", marginBottom: 8, fontSize: 11 }}>
-            <Check checked={format === "standard"} label="Standard" />
-            <Check checked={format === "expanded"} label="Expanded" />
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 0.9fr 1fr", gap: 8, marginBottom: 8 }}>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 700 }}>Player Name:</div>
-              <div style={{ borderBottom: "1px solid #111", minHeight: 16, paddingTop: 2 }}>{playerName}</div>
+        <div className="dl-sheet-outer">
+          <div className="decklist-form dl-sheet" ref={formRef}>
+            <div className="dl-title">
+              Pokémon TCG Tournament Season — Deck List
             </div>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 700 }}>Player ID:</div>
-              <div style={{ borderBottom: "1px solid #111", minHeight: 16, paddingTop: 2 }}>{playerId}</div>
+
+            <div className="dl-top">
+              <div className="dl-formats">
+                <Check checked={format === "standard"} label="Standard" />
+                <Check checked={format === "expanded"} label="Expanded" />
+              </div>
+              <div className="dl-player">
+                <Field label="Player Name:" value={playerName} />
+                <Field label="Player ID:" value={playerId} />
+                <Field label="Date of Birth (MM/DD/YYYY):" value={dob} />
+              </div>
+              <div className="dl-age">
+                <strong>Age Division:</strong>
+                <Check checked={division === "junior"} label="Junior Division" />
+                <Check checked={division === "senior"} label="Senior Division" />
+                <Check checked={division === "masters"} label="Masters Division" />
+              </div>
             </div>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 700 }}>Date of Birth (MM/DD/YYYY):</div>
-              <div style={{ borderBottom: "1px solid #111", minHeight: 16, paddingTop: 2 }}>{dob}</div>
+
+            <div className="dl-body">
+              <aside className="dl-legend">
+                <div className="dl-legend-title">Set abbreviations</div>
+                {SET_LEGEND.map((block) => (
+                  <div key={block.series} className="dl-legend-block">
+                    <div className="dl-legend-series">{block.series}</div>
+                    <div className="dl-legend-codes">{block.codes}</div>
+                  </div>
+                ))}
+                <div className="dl-legend-block">
+                  <div className="dl-legend-series">Regulation marks</div>
+                  <div className="dl-legend-codes">G H I J (Standard rotation)</div>
+                </div>
+                <div className="dl-admin">ADMINISTRATIVE USE ONLY</div>
+              </aside>
+
+              <div className="dl-tables">
+                <DeckTable
+                  title="Pokémon"
+                  count={totals?.pokemon || 0}
+                  rows={pokemonRows}
+                  kind="pokemon"
+                />
+                <DeckTable
+                  title="Trainer"
+                  count={totals?.trainer || 0}
+                  rows={trainerRows}
+                  kind="simple"
+                />
+                <DeckTable
+                  title="Energy"
+                  count={totals?.energy || 0}
+                  rows={energyRows}
+                  kind="simple"
+                />
+              </div>
             </div>
-          </div>
 
-          <div style={{ marginBottom: 10, fontSize: 10 }}>
-            <strong>Age Division:</strong>{" "}
-            <Check checked={division === "junior"} label="Junior" />
-            <Check checked={division === "senior"} label="Senior" />
-            <Check checked={division === "masters"} label="Masters" />
-          </div>
-
-          <DeckTable
-            title="Pokémon"
-            count={totals?.pokemon || 0}
-            rows={pokemonRows}
-            columns="pokemon"
-          />
-          <DeckTable
-            title="Trainer"
-            count={totals?.trainer || 0}
-            rows={trainerRows}
-            columns="simple"
-          />
-          <DeckTable
-            title="Energy"
-            count={totals?.energy || 0}
-            rows={energyRows}
-            columns="simple"
-          />
-
-          <p style={{ fontSize: 8, margin: "8px 0 4px", color: "#333" }}>
-            The name of each card and the quantity must be listed. Players may use cards from previous
-            expansions that share the same name as a card listed in this deck (reprints). For tournament
-            use under Play! Pokémon rules.
-          </p>
-          <div
-            style={{
-              marginTop: 6,
-              borderTop: "2px solid #111",
-              paddingTop: 4,
-              fontSize: 9,
-              fontWeight: 700,
-              letterSpacing: 0.4,
-            }}
-          >
-            ADMINISTRATIVE USE ONLY
+            <p className="dl-footnote">
+              List quantity and name of each card. Reprints with the same name from earlier expansions are
+              allowed when legal. For Play! Pokémon tournament registration.
+            </p>
           </div>
         </div>
       )}
     </div>
   );
 }
+
+const decklistCss = `
+  .dl-page { max-width: 1100px; margin: 0 auto; }
+  .dl-toolbar { margin-bottom: 1rem; }
+  .dl-toolbar-row {
+    display: flex; flex-wrap: wrap; gap: 0.55rem; align-items: end; margin-bottom: 0.45rem;
+  }
+  .dl-toolbar-row .label { margin: 0; min-width: 110px; }
+  .dl-sheet-outer {
+    overflow: auto;
+    background: #52525b;
+    padding: 12px;
+    border-radius: 8px;
+  }
+  .dl-sheet {
+    width: 10.5in;
+    height: 7.6in;
+    margin: 0 auto;
+    box-sizing: border-box;
+    background: #fff;
+    color: #111;
+    border: 1.5px solid #111;
+    padding: 0.18in 0.2in 0.12in;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 8.5pt;
+    line-height: 1.15;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .dl-title {
+    text-align: center;
+    font-weight: 700;
+    font-size: 11pt;
+    margin-bottom: 0.08in;
+  }
+  .dl-top { margin-bottom: 0.08in; }
+  .dl-formats { margin-bottom: 0.06in; }
+  .dl-player {
+    display: grid;
+    grid-template-columns: 1.35fr 0.85fr 1.1fr;
+    gap: 0.12in;
+    margin-bottom: 0.06in;
+  }
+  .dl-field-label { font-weight: 700; font-size: 8pt; display: block; }
+  .dl-field-line {
+    display: block;
+    border-bottom: 1px solid #111;
+    min-height: 14px;
+    padding-top: 1px;
+    font-size: 9pt;
+  }
+  .dl-age { font-size: 8pt; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; }
+  .dl-check { display: inline-flex; align-items: center; gap: 4px; margin-right: 8px; white-space: nowrap; }
+  .dl-box {
+    width: 10px; height: 10px; border: 1.2px solid #111;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 8px; font-weight: 700; flex: 0 0 auto;
+  }
+  .dl-body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 2.15in 1fr;
+    gap: 0.14in;
+    min-height: 0;
+  }
+  .dl-legend {
+    border: 1px solid #111;
+    background: #f3f3f3;
+    padding: 0.06in;
+    font-size: 6.5pt;
+    display: flex;
+    flex-direction: column;
+    gap: 0.05in;
+    overflow: hidden;
+  }
+  .dl-legend-title { font-weight: 700; font-size: 7.5pt; margin-bottom: 2px; }
+  .dl-legend-block { background: #fff; border: 1px solid #bbb; padding: 3px 4px; }
+  .dl-legend-series { font-weight: 700; margin-bottom: 1px; }
+  .dl-legend-codes { word-spacing: 0.15em; line-height: 1.25; }
+  .dl-admin {
+    margin-top: auto;
+    background: #333;
+    color: #fff;
+    font-weight: 700;
+    font-size: 6.5pt;
+    letter-spacing: 0.04em;
+    text-align: center;
+    padding: 4px 2px;
+  }
+  .dl-tables {
+    display: flex;
+    flex-direction: column;
+    gap: 0.06in;
+    min-height: 0;
+  }
+  .dl-table-wrap { min-height: 0; }
+  .dl-table-head {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: 8.5pt;
+    margin-bottom: 1px;
+  }
+  .dl-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 7.5pt;
+  }
+  .dl-table th {
+    border: 1px solid #111;
+    background: #222;
+    color: #fff;
+    font-weight: 700;
+    padding: 1px 2px;
+    text-align: center;
+  }
+  .dl-table td {
+    border: 1px solid #111;
+    height: 13px;
+    padding: 0 2px;
+    text-align: center;
+    vertical-align: middle;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .dl-table tr.alt td { background: #f0f0f0; }
+  .dl-table .c-name { text-align: left; padding-left: 3px; }
+  .dl-poke .c-qty { width: 8%; }
+  .dl-poke .c-name { width: 48%; }
+  .dl-poke .c-set { width: 12%; }
+  .dl-poke .c-coll { width: 16%; }
+  .dl-poke .c-reg { width: 10%; }
+  .dl-simple .c-qty { width: 10%; }
+  .dl-simple .c-name { width: 90%; }
+  .dl-footnote {
+    margin: 0.06in 0 0;
+    font-size: 6pt;
+    color: #333;
+    line-height: 1.2;
+  }
+
+  @media print {
+    .deck-pdf-no-print { display: none !important; }
+    html, body {
+      background: #fff !important;
+      color: #000 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .dl-page { max-width: none !important; margin: 0 !important; }
+    .dl-sheet-outer {
+      background: transparent !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+      overflow: visible !important;
+    }
+    .dl-sheet {
+      width: 10.5in !important;
+      height: 7.6in !important;
+      margin: 0 auto !important;
+      border: 1px solid #111 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    @page {
+      size: letter landscape;
+      margin: 0.25in;
+    }
+  }
+`;
