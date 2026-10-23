@@ -48,6 +48,19 @@ export function enrichCardImage<T extends ImageSource>(
   card: T,
   peers: T[]
 ): T & { image?: string } {
+  // Si la API ya trae imagen real, úsala.
+  if (card.image?.trim()) return { ...card, image: card.image.trim() };
+
+  // Promos MEP a veces no tienen arte en el CDN: reusar otra impresión del mismo nombre.
+  const name = card.name.trim().toLowerCase();
+  const peerArt = peers.find(
+    (p) =>
+      p.id !== card.id &&
+      p.name.trim().toLowerCase() === name &&
+      Boolean(p.image?.trim())
+  );
+  if (peerArt?.image?.trim()) return { ...card, image: peerArt.image.trim() };
+
   const built = buildTcgdexImageUrl(card);
   if (built) return { ...card, image: built };
   const fallback = resolveImageFromPeers(card.name, peers);
@@ -80,10 +93,10 @@ export function tcgdxImageVariants(baseUrl?: string): string[] {
     return [url];
   }
 
-  // TCGdex assets
+  // TCGdex assets (no usar la URL “base” sin /low|/high: a menudo es HTML 200).
   if (url.includes("assets.tcgdex.net") || /\.webp/i.test(url)) {
     const base = url.replace(/\/low\.webp$|\/high\.webp$|\.webp$/i, "");
-    return [`${base}/low.webp`, `${base}/high.webp`, base];
+    return [`${base}/low.webp`, `${base}/high.webp`];
   }
 
   return [url];

@@ -38,8 +38,12 @@ function formatCardCode(card: { setCode?: string; number?: string }): string {
 function CardImage({ image, name }: { image?: string; name: string }) {
   const variants = useMemo(() => tcgdxImageVariants(image), [image]);
   const [variantIndex, setVariantIndex] = useState(0);
-  useEffect(() => setVariantIndex(0), [image]);
-  const src = variants[variantIndex];
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setVariantIndex(0);
+    setFailed(false);
+  }, [image]);
+  const src = !failed ? variants[variantIndex] : undefined;
   if (!src) {
     return (
       <div
@@ -67,7 +71,13 @@ function CardImage({ image, name }: { image?: string; name: string }) {
       alt={name}
       loading="lazy"
       style={{ width: "3.5rem", height: "4.8rem", objectFit: "cover", borderRadius: 4 }}
-      onError={() => setVariantIndex((i) => (i + 1 < variants.length ? i + 1 : i))}
+      onError={() => {
+        setVariantIndex((i) => {
+          if (i + 1 < variants.length) return i + 1;
+          setFailed(true);
+          return i;
+        });
+      }}
     />
   );
 }

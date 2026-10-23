@@ -142,7 +142,9 @@ export async function searchTcgdexCards(options: {
 
   if (accepted.length === 0) return [];
 
-  const enriched = accepted.map((c) => enrichCardImage(c, accepted));
+  // Primero las que ya traen `image` de la API, para poder prestar arte a promos sin CDN.
+  const orderedForArt = [...accepted].sort((a, b) => Number(Boolean(b.image)) - Number(Boolean(a.image)));
+  const enriched = orderedForArt.map((c) => enrichCardImage(c, orderedForArt));
 
   const results = enriched
     .map(briefToResult)
