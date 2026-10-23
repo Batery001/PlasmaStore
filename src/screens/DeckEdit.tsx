@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { DeckBuilder } from "../components/deck/DeckBuilder";
+import { MylDeckBuilder } from "../components/deck/MylDeckBuilder";
 import { DeckTour, clearDeckTourDone, shouldStartDeckTour } from "../components/DeckTour";
 import { deckGameLabel, normalizeDeckGame, type DeckGame } from "../lib/deckGames";
 import { parsePokemonDecklist } from "../lib/pokemon/deckParser";
@@ -42,6 +43,7 @@ export function DeckEdit() {
   const [tourKey, setTourKey] = useState(0);
 
   const isPokemon = game === "pokemon";
+  const isMyl = game === "mitos-y-leyendas";
   const localParse = isPokemon && rawText.trim() ? parsePokemonDecklist(rawText) : null;
   const needsGamePick = isNew && game == null;
 
@@ -172,7 +174,14 @@ export function DeckEdit() {
           <button type="button" className={styles.btnPrimary} onClick={() => pickGame("pokemon")}>
             Pokémon TCG
           </button>
-          <button type="button" className={styles.btnGhost} onClick={() => pickGame("mitos-y-leyendas")}>
+          <button
+            type="button"
+            className={styles.btnGhost}
+            onClick={() => {
+              setMode("build");
+              pickGame("mitos-y-leyendas");
+            }}
+          >
             Mitos y Leyendas
           </button>
         </div>
@@ -241,7 +250,7 @@ export function DeckEdit() {
         />
       </label>
 
-      {isPokemon ? (
+      {isPokemon || isMyl ? (
         <div
           data-tour="deck-tour-modes"
           style={{ display: "flex", gap: "0.5rem", margin: "1rem 0", borderBottom: "1px solid var(--border)", paddingBottom: "0.65rem" }}
@@ -282,6 +291,19 @@ export function DeckEdit() {
             }}
           />
         </div>
+      ) : isMyl && mode === "build" ? (
+        <div data-tour="deck-tour-builder-myl">
+          <MylDeckBuilder
+            key={buildKey}
+            initialRawText={rawText}
+            applyListLabel="Usar esta lista"
+            onRawTextReady={(text) => {
+              setRawText(text);
+              setMode("paste");
+              setErr(null);
+            }}
+          />
+        </div>
       ) : (
         <form className={styles.form} onSubmit={(e) => void save(e)}>
           <label className={styles.label} data-tour="deck-tour-list">
@@ -295,7 +317,7 @@ export function DeckEdit() {
               placeholder={
                 isPokemon
                   ? "Pokémon: 12\n4 Pikachu SVI 001\n…"
-                  : "Pega tu lista (aliados, tótems, oro, etc.)"
+                  : "3x Caballero\n4x Oro\n2x Tótem…"
               }
               style={{ fontFamily: "ui-monospace, monospace", resize: "vertical" }}
             />

@@ -7,6 +7,7 @@ import { clientKey, rateLimit } from "../rateLimit.mjs";
 import { parseAndEnrichPokemonDecklist } from "./enrichCategories.mjs";
 import { toStoredParsedCards } from "./deckParser.mjs";
 import { searchPokemontcgCards } from "./pokemontcgSearch.mjs";
+import { searchMylCards } from "../myl/mylSearch.mjs";
 
 function normalizeDeckGame(raw) {
   const s = String(raw || "")
@@ -272,6 +273,22 @@ export function mountDeckRoutes(app, { getDb, requireUser, handleErr }) {
         formatRaw === "expanded" || formatRaw === "glc" ? formatRaw : "standard";
 
       const cards = await searchPokemontcgCards({ query: q, type, format });
+      res.json({ ok: true, cards });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  app.get("/api/store/myl/cards/search", async (req, res) => {
+    try {
+      const rl = rateLimit(clientKey(req, "myl-cards-search"), { limit: 60, windowMs: 60_000 });
+      if (!rl.ok) {
+        return res.status(429).json({ ok: false, error: "Demasiadas búsquedas. Espera un momento." });
+      }
+      const q = String(req.query.q || "").trim();
+      if (q.length < 2) return res.json({ ok: true, cards: [] });
+      const type = String(req.query.type || "all").trim().toLowerCase() || "all";
+      const cards = await searchMylCards({ query: q, type });
       res.json({ ok: true, cards });
     } catch (e) {
       handleErr(res, e);
