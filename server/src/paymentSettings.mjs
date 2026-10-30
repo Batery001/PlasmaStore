@@ -2,7 +2,7 @@
  * Configuración de pagos (Webpay + TUU) persistida en DB.
  * Prioridad: ajustes del admin → variables de entorno.
  */
-import { normalizeTuuMode, TEST_ACCOUNT_ID } from "./tuuCheckout.mjs";
+import { normalizeTuuAccountId, normalizeTuuMode, TEST_ACCOUNT_ID } from "./tuuCheckout.mjs";
 
 export const PAYMENTS_SETTINGS_ID = "payments";
 
@@ -120,13 +120,23 @@ export async function savePaymentSettings(db, body, opts = {}) {
     body.public_base_url !== undefined ? String(body.public_base_url || "").trim() : prev.public_base_url;
   const tuu_enabled = body.tuu_enabled !== undefined ? asBool(body.tuu_enabled, true) : prev.tuu_enabled !== false;
   const tuu_mode = body.tuu_mode !== undefined ? normalizeTuuMode(body.tuu_mode) : prev.tuu_mode;
-  const tuu_account_id =
-    body.tuu_account_id !== undefined ? String(body.tuu_account_id || "").trim() : prev.tuu_account_id;
+  const tuu_account_id = normalizeTuuAccountId(
+    body.tuu_account_id !== undefined ? String(body.tuu_account_id || "").trim() : prev.tuu_account_id
+  );
   let tuu_secret = prev.tuu_secret;
   if (body.tuu_secret !== undefined) {
     const incoming = String(body.tuu_secret || "").trim().replace(/\s+/g, "");
     if (incoming) tuu_secret = incoming;
     else if (opts.keepApiKeyIfEmpty === false) tuu_secret = "";
+  }
+
+  if (tuu_mode === "integration" && tuu_account_id && tuu_secret && tuu_account_id !== TEST_ACCOUNT_ID) {
+    throw Object.assign(
+      new Error(
+        "Con account_id real el modo debe ser Producción. Si lo dejás en Integración, TUU responde que la cuenta/llave no coinciden."
+      ),
+      { status: 400 }
+    );
   }
 
   if (tuu_mode === "production") {

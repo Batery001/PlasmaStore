@@ -147,14 +147,25 @@ export function isHttpsUrl(url) {
   return /^https:\/\//i.test(String(url || "").trim());
 }
 
+/** TUU espera account_id numérico (sin puntos/guiones de RUT). */
+export function normalizeTuuAccountId(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return "";
+  const digits = s.replace(/\D/g, "");
+  return digits || s;
+}
+
 /**
  * @param {Awaited<ReturnType<import("./paymentSettings.mjs").readPaymentSettings>>} cfg
  */
 export function resolveTuuCredentials(cfg) {
   const enabled = cfg.tuu_enabled !== false;
   const mode = normalizeTuuMode(cfg.tuu_mode);
-  const customId = String(cfg.tuu_account_id || "").trim();
+  const customId = normalizeTuuAccountId(cfg.tuu_account_id);
   const customSecret = String(cfg.tuu_secret || "").trim().replace(/\s+/g, "");
+  const hasCustom = Boolean(customId && customSecret);
+  const looksLikeLive =
+    hasCustom && customId !== TEST_ACCOUNT_ID && customSecret !== TEST_SECRET;
 
   if (mode === "production") {
     let error = null;
@@ -175,7 +186,22 @@ export function resolveTuuCredentials(cfg) {
     };
   }
 
-  const usingTest = !customId || !customSecret;
+  // Claves reales contra haulmer.dev → TUU muestra "Nº de cuenta / Llave secreta no coinciden".
+  if (looksLikeLive) {
+    return {
+      enabled,
+      mode,
+      accountId: customId,
+      secret: customSecret,
+      usingTest: false,
+      endpoint: TUU_ENDPOINTS.integration,
+      ready_for_live: false,
+      error:
+        "Tus account_id/secret parecen de producción, pero el modo está en Integración (haulmer.dev). En Admin → Sistema de pago cambiá a Producción y guardá.",
+    };
+  }
+
+  const usingTest = !hasCustom;
   const accountId = usingTest ? TEST_ACCOUNT_ID : customId;
   const secret = usingTest ? TEST_SECRET : customSecret;
   return {
@@ -224,6 +250,7 @@ export async function requestTuuPaymentUrl(endpoint, fields) {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 20000);
   try {
+    // Docs: x_amount es Number en JSON; la firma del caller usa el monto como string.
     const amountNum = Math.round(Number(fields.x_amount) || 0);
     const body = { ...fields, x_amount: amountNum };
     const r = await fetch(endpoint, {

@@ -111,7 +111,7 @@ export function AdminPayments() {
           >
             {tuuReady
               ? "TUU listo en producción: account_id + secret reales + HTTPS."
-              : "En pruebas se usan claves públicas de Haulmer. Para cobrar de verdad: modo Producción + account_id/secret que te dio TUU + URL https://plasmastoretcg.cl"}
+              : "Para cobrar de verdad: modo Producción + account_id/secret de Pago Online (no la API Key del Workspace) + URL https://plasmastoretcg.cl. Si usás claves reales con modo Integración, TUU muestra «cuenta/llave no coinciden»."}
           </div>
 
           <label className={adminStyles.label} style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
