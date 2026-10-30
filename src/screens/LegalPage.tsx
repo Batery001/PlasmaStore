@@ -48,7 +48,7 @@ function PrivacyBody() {
         <li>Identificación: nombre, apellido, nombre de usuario, RUT, fecha de nacimiento.</li>
         <li>Contacto: correo electrónico, teléfono.</li>
         <li>Entrega: dirección, comuna, región y notas de despacho o retiro.</li>
-        <li>Comerciales: historial de pedidos, cupos de eventos, comprobantes de pago (vía Webpay/Transbank).</li>
+        <li>Comerciales: historial de pedidos, cupos de eventos, comprobantes de pago (vía TUU Pago Online / Haulmer).</li>
         <li>Técnicos: cookies de sesión e invitado necesarias para el carrito y la autenticación.</li>
       </ul>
       <h2>3. Finalidades y bases</h2>
@@ -75,9 +75,9 @@ function PrivacyBody() {
       </p>
       <h2>4. Encargados y destinatarios</h2>
       <p>
-        Podemos compartir datos con proveedores estrictamente necesarios: Transbank (Webpay), hosting del sitio,
-        correo transaccional (SMTP) y, si aplica, empresas de transporte (p. ej. Starken) para el despacho. Ellos
-        tratan datos según nuestras instrucciones y la ley.
+        Podemos compartir datos con proveedores estrictamente necesarios: TUU / Haulmer (pago online), hosting del
+        sitio, correo transaccional (SMTP) y, si aplica, empresas de transporte (p. ej. Starken) para el despacho.
+        Ellos tratan datos según nuestras instrucciones y la ley.
       </p>
       <h2>5. Conservación</h2>
       <p>
@@ -134,15 +134,16 @@ function TermsBody() {
       </p>
       <h2>3. Pedidos y pago</h2>
       <p>
-        El pago online se procesa principalmente vía Webpay (Transbank). Al confirmar el pago, el stock o cupo
-        queda comprometido según las reglas del sistema. Los pedidos pueden retirarse en tienda o enviarse según
-        las opciones configuradas (p. ej. Starken). Costos y plazos de envío se informan en el checkout.
+        El pago online se procesa vía TUU Pago Online (Haulmer). También puedes elegir pagar en tienda cuando esa
+        opción esté disponible. Al confirmar el pago, el stock o cupo queda comprometido según las reglas del
+        sistema. Los pedidos pueden retirarse en tienda o enviarse según las opciones configuradas (p. ej. Starken).
+        Costos y plazos de envío se informan en el checkout.
       </p>
       <h2>4. Eventos / cupos</h2>
       <p>
-        Los cupos se gestionan solo por esta página (no por WhatsApp). Cada evento puede definir capacidad, precio,
-        métodos de pago (Webpay y/o pago en tienda) y ventana de arrepentimiento. Debes aceptar los términos
-        específicos del evento al inscribirte.
+        Los cupos se gestionan solo por esta página (no por WhatsApp), con cuenta iniciada y carrito. Cada evento
+        puede definir capacidad, precio, métodos de pago (TUU y/o pago en tienda) y ventana de arrepentimiento.
+        Debes aceptar los términos específicos del evento al inscribirte.
       </p>
       <h2>5. Disponibilidad</h2>
       <p>
@@ -231,8 +232,9 @@ function ReturnsBody() {
       </p>
       <h2>3. Reembolsos</h2>
       <p>
-        Si el pago fue con Webpay, el reembolso se gestiona por la misma vía cuando corresponde. El plazo de
-        abono depende del banco emisor. Órdenes con pago en tienda se resuelven en el local.
+        Si el pago fue con TUU Pago Online, el reembolso se gestiona de forma manual con la tienda (y con TUU cuando
+        corresponda). El plazo de abono depende del emisor/pasarela. Órdenes con pago en tienda se resuelven en el
+        local.
       </p>
       <h2>4. Cupos de eventos</h2>
       <p>

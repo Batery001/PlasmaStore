@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthContext";
 import { usePosPopup } from "../pos/PosPopupContext";
 import { PlasmaOrbLogo } from "./PlasmaOrbLogo";
 import { CartNavIcon } from "./CartNavIcon";
+import { HeaderSearch } from "./HeaderSearch";
 import styles from "./layout.module.css";
 
 type StoreTag = { id: number; name: string; slug: string; order?: number };
@@ -110,6 +111,7 @@ export function Layout() {
           <PlasmaOrbLogo className={styles.brandOrb} />
           <span className={styles.brandText}>Plasma Store</span>
         </Link>
+        <HeaderSearch cosmic={isLanding} />
         <nav className={`${styles.nav} ${isLanding ? styles.navCosmic : ""}`} aria-label="Tienda">
           <div className={styles.navDrop}>
             <Link to="/catalogo" className={styles.navDropTrigger}>

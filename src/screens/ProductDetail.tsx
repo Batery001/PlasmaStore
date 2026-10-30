@@ -3,7 +3,6 @@ import { Link, useParams } from "react-router-dom";
 import { resolveStoreMediaUrl } from "../lib/media";
 import { parseResponseJson } from "../lib/parseResponseJson";
 import { formatCLP } from "../lib/money";
-import { useAuth } from "../auth/AuthContext";
 import { notifyCartChanged } from "../lib/cartEvents";
 import styles from "./pages.module.css";
 
@@ -21,7 +20,6 @@ type Product = {
 export function ProductDetail() {
   const { id } = useParams();
   const pid = useMemo(() => parseInt(String(id || ""), 10), [id]);
-  const { user } = useAuth();
   const [p, setP] = useState<Product | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
@@ -64,10 +62,6 @@ export function ProductDetail() {
   async function addToCart(goToCart: boolean) {
     setMsg(null);
     if (!p) return;
-    if (!user) {
-      setMsg("Inicia sesión para agregar al carrito.");
-      return;
-    }
     const q = Math.max(1, Math.min(99, Math.floor(Number(qty) || 1)));
     const res = await fetch("/api/store/cart", {
       method: "POST",

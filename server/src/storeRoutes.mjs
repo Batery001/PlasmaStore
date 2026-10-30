@@ -7,6 +7,7 @@ import { ObjectId } from "mongodb";
 import { Environment, IntegrationApiKeys, IntegrationCommerceCodes, Options, WebpayPlus } from "transbank-sdk";
 import { nextSeq } from "./counters.mjs";
 import { clearSessionCookie, makeGuestCookie, makeSessionCookie, newGuestId, readGuestId, readSession } from "./session.mjs";
+import { mergeGuestCartIntoUser } from "./cartMerge.mjs";
 import {
   RESERVATION_TTL_MS,
   STOCK_GONE_MSG,
@@ -1342,6 +1343,11 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
         });
       }
 
+      try {
+        await mergeGuestCartIntoUser(db, readGuestId(req), row._id);
+      } catch (mergeErr) {
+        console.warn("[cart-merge]", mergeErr instanceof Error ? mergeErr.message : mergeErr);
+      }
       const cookie = makeSessionCookie({ uid: String(row._id), admin: row.role === "admin" }, 60 * 60 * 24 * 14);
       res.setHeader("Set-Cookie", cookie);
       res.json({
@@ -1373,6 +1379,11 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
       }
       if (!verifyTotp(String(row.totp_secret), code)) {
         return res.status(401).json({ ok: false, error: "Código 2FA incorrecto." });
+      }
+      try {
+        await mergeGuestCartIntoUser(db, readGuestId(req), row._id);
+      } catch (mergeErr) {
+        console.warn("[cart-merge]", mergeErr instanceof Error ? mergeErr.message : mergeErr);
       }
       const cookie = makeSessionCookie({ uid: String(row._id), admin: true }, 60 * 60 * 24 * 14);
       res.setHeader("Set-Cookie", cookie);

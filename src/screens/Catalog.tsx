@@ -22,12 +22,16 @@ type Product = {
 /** Catálogo de tienda (productos sellados / generales). */
 export function Catalog() {
   const { user } = useAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const tag = (searchParams.get("tag") || "").trim();
   const [products, setProducts] = useState<Product[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(() => (searchParams.get("q") || "").trim());
   const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    setQ((searchParams.get("q") || "").trim());
+  }, [searchParams]);
 
   useEffect(() => {
     const qs = tag ? `?tag=${encodeURIComponent(tag)}` : "";
@@ -38,10 +42,6 @@ export function Catalog() {
   }, [tag]);
 
   useEffect(() => {
-    if (!user) {
-      setCartCount(0);
-      return;
-    }
     let alive = true;
     fetch("/api/store/cart", { credentials: "include" })
       .then(async (r) => parseResponseJson<{ ok?: boolean; items?: Array<{ quantity?: number }> }>(r))
@@ -71,12 +71,17 @@ export function Catalog() {
     });
   }, [products, q]);
 
+  function onSearchChange(value: string) {
+    setQ(value);
+    const next = new URLSearchParams(searchParams);
+    const trimmed = value.trim();
+    if (trimmed) next.set("q", trimmed);
+    else next.delete("q");
+    setSearchParams(next, { replace: true });
+  }
+
   async function addToCart(p: Product) {
     setMsg(null);
-    if (!user) {
-      setMsg("Inicia sesión para agregar al carrito.");
-      return;
-    }
     const res = await fetch("/api/store/cart", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -122,12 +127,13 @@ export function Catalog() {
             <input
               className={styles.searchInput}
               value={q}
-              onChange={(e) => setQ(e.target.value)}
+              onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Buscar productos…"
               aria-label="Buscar productos"
+              type="search"
             />
             {q.trim() ? (
-              <button type="button" className={styles.searchClear} onClick={() => setQ("")}>
+              <button type="button" className={styles.searchClear} onClick={() => onSearchChange("")}>
                 Limpiar
               </button>
             ) : null}

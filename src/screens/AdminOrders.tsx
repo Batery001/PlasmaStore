@@ -448,15 +448,21 @@ export function AdminOrders() {
                     {statusLabel(s)}
                   </button>
                 ))}
-                <button
-                  type="button"
-                  className={adminStyles.btnDanger}
-                  disabled={busy}
-                  onClick={() => void refundWebpay()}
-                  title="Reembolso real vía Webpay (si aplica)"
-                >
-                  Reembolsar Webpay
-                </button>
+                {detail.order.payment?.provider === "webpay" || detail.order.payment?.provider === "webpay_mock" ? (
+                  <button
+                    type="button"
+                    className={adminStyles.btnDanger}
+                    disabled={busy}
+                    onClick={() => void refundWebpay()}
+                    title="Reembolso real vía Webpay (si aplica)"
+                  >
+                    Reembolsar Webpay
+                  </button>
+                ) : detail.order.payment?.provider === "tuu" ? (
+                  <span className={adminStyles.muted} style={{ alignSelf: "center" }}>
+                    Reembolso TUU: manual con TUU/caja (marca la orden como Reembolsado al confirmar).
+                  </span>
+                ) : null}
                 <button type="button" className={adminStyles.btn} disabled={busy} onClick={() => void issueBoleta()}>
                   {detail.order.boleta?.folio ? `Ver boleta #${detail.order.boleta.folio}` : "Emitir boleta de venta"}
                 </button>

@@ -1,0 +1,22 @@
+828,21	Ayuda 	0.918
+918,24	Gufarapida	0.937
+269,146	$	0.890
+383,139	$	0.952
+263,190	Ventas	0.991
+380,190	Pagos	0.993
+489,190	Catalogo	0.990
+602,192	Inventario	0.973
+711,191	Documentos	0.992
+711,205	Electronicos	0.983
+734,249	BETA	0.996
+385,274	?	0.772
+259,309	Reservas	0.997
+368,309	Dispositivos	0.995
+490,309	Adelanto	0.992
+604,309	Informes	0.977
+722,309	Eventos	0.991
+385,364	中	0.640
+249,410	Link de Pago	0.976
+362,412	Configuracion	0.976
+409,530	Tenemosuna nueva version	0.953
+566,530	Actualizar	0.973
