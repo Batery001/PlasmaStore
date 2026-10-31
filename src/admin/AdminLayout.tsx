@@ -14,6 +14,7 @@ function routeLabel(pathname: string) {
   if (pathname.startsWith("/admin/carritos")) return "Carritos";
   if (pathname.startsWith("/admin/ordenes")) return "Órdenes";
   if (pathname.startsWith("/admin/pagos")) return "Sistema de pago";
+  if (pathname.startsWith("/admin/cupones")) return "Cupones";
   if (pathname.startsWith("/admin/envio")) return "Envío / retiro";
   if (pathname.startsWith("/admin/correo")) return "Correo";
   if (pathname.startsWith("/admin/ops")) return "Operación";
@@ -55,8 +56,17 @@ export function AdminLayout() {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  if (user.role !== "admin") {
+  if (user.role !== "admin" && user.role !== "staff") {
     return <Navigate to="/catalogo" replace />;
+  }
+  const isAdmin = user.role === "admin";
+  const staffOk =
+    location.pathname.startsWith("/admin/panel") ||
+    location.pathname.startsWith("/admin/ordenes") ||
+    location.pathname === "/admin" ||
+    location.pathname === "/admin/";
+  if (!isAdmin && !staffOk) {
+    return <Navigate to="/admin/panel" replace />;
   }
 
   return (
@@ -77,64 +87,71 @@ export function AdminLayout() {
           >
             Panel
           </NavLink>
-          <div className={styles.navSection}>Catálogo</div>
-          <NavLink
-            to="/admin/productos"
-            className={({ isActive }) =>
-              isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
-            }
-          >
-            Productos
-          </NavLink>
-          <NavLink
-            to="/admin/sitio"
-            className={({ isActive }) =>
-              isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
-            }
-          >
-            Sitio / redes
-          </NavLink>
-          <NavLink
-            to="/admin/eventos"
-            className={({ isActive }) =>
-              isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
-            }
-          >
-            Eventos
-          </NavLink>
-          <NavLink
-            to="/admin/etiquetas"
-            className={({ isActive }) =>
-              isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
-            }
-          >
-            Etiquetas
-          </NavLink>
-          <NavLink
-            to="/admin/widgets"
-            className={({ isActive }) =>
-              isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
-            }
-          >
-            Widgets
-          </NavLink>
+          {isAdmin ? (
+            <>
+              <div className={styles.navSection}>Catálogo</div>
+              <NavLink
+                to="/admin/productos"
+                className={({ isActive }) =>
+                  isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
+                }
+              >
+                Productos
+              </NavLink>
+              <NavLink
+                to="/admin/sitio"
+                className={({ isActive }) =>
+                  isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
+                }
+              >
+                Sitio / redes
+              </NavLink>
+              <NavLink
+                to="/admin/eventos"
+                className={({ isActive }) =>
+                  isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
+                }
+              >
+                Eventos
+              </NavLink>
+              <NavLink
+                to="/admin/etiquetas"
+                className={({ isActive }) =>
+                  isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
+                }
+              >
+                Etiquetas
+              </NavLink>
+              <NavLink
+                to="/admin/widgets"
+                className={({ isActive }) =>
+                  isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
+                }
+              >
+                Widgets
+              </NavLink>
+            </>
+          ) : null}
           <div className={styles.navSection}>Ventas</div>
           <button
             type="button"
-            className={pos.open ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem}
+            className={styles.navItem}
             onClick={() => pos.show()}
+            title="Abrir POS en ventana aparte"
             style={{ width: "100%", textAlign: "left", cursor: "pointer", border: "none", background: "transparent" }}
           >
             POS
           </button>
-          <NavLink
-            to="/admin/carritos"
-            className={({ isActive }) =>
-              isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
-            }
-          >
-            Carritos activos
-          </NavLink>
+          {isAdmin ? (
+            <NavLink
+              to="/admin/carritos"
+              className={({ isActive }) =>
+                isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
+              }
+            >
+              Carritos activos
+            </NavLink>
+          ) : null}
           <NavLink
             to="/admin/ordenes"
             className={({ isActive }) =>
@@ -143,39 +160,51 @@ export function AdminLayout() {
           >
             Órdenes
           </NavLink>
-          <div className={styles.navSection}>Sistema</div>
-          <NavLink
-            to="/admin/pagos"
-            className={({ isActive }) =>
-              isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
-            }
-          >
-            Sistema de pago
-          </NavLink>
-          <NavLink
-            to="/admin/envio"
-            className={({ isActive }) =>
-              isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
-            }
-          >
-            Envío / retiro
-          </NavLink>
-          <NavLink
-            to="/admin/correo"
-            className={({ isActive }) =>
-              isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
-            }
-          >
-            Correo
-          </NavLink>
-          <NavLink
-            to="/admin/ops"
-            className={({ isActive }) =>
-              isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
-            }
-          >
-            Operación / 2FA
-          </NavLink>
+          {isAdmin ? (
+            <>
+              <div className={styles.navSection}>Sistema</div>
+              <NavLink
+                to="/admin/pagos"
+                className={({ isActive }) =>
+                  isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
+                }
+              >
+                Sistema de pago
+              </NavLink>
+              <NavLink
+                to="/admin/cupones"
+                className={({ isActive }) =>
+                  isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
+                }
+              >
+                Cupones
+              </NavLink>
+              <NavLink
+                to="/admin/envio"
+                className={({ isActive }) =>
+                  isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
+                }
+              >
+                Envío / retiro
+              </NavLink>
+              <NavLink
+                to="/admin/correo"
+                className={({ isActive }) =>
+                  isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
+                }
+              >
+                Correo
+              </NavLink>
+              <NavLink
+                to="/admin/ops"
+                className={({ isActive }) =>
+                  isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
+                }
+              >
+                Operación / 2FA
+              </NavLink>
+            </>
+          ) : null}
         </nav>
         <div className={styles.sidebarFooter}>
           <button type="button" className={styles.linkbtnAccent} onClick={() => pos.show()}>

@@ -27,6 +27,9 @@ export function Catalog() {
   const [products, setProducts] = useState<Product[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [q, setQ] = useState(() => (searchParams.get("q") || "").trim());
+  const [onlyStock, setOnlyStock] = useState(() => searchParams.get("stock") === "1");
+  const [onlyOffers, setOnlyOffers] = useState(() => searchParams.get("oferta") === "1");
+  const [maxPrice, setMaxPrice] = useState(() => searchParams.get("max") || "");
   const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
@@ -64,20 +67,36 @@ export function Catalog() {
     const needle = String(q || "")
       .trim()
       .toLowerCase();
-    if (!needle) return products;
+    const max = parseInt(String(maxPrice || ""), 10);
     return products.filter((p) => {
-      const hay = `${p.name || ""} ${p.description || ""}`.toLowerCase();
-      return hay.includes(needle);
+      if (needle) {
+        const hay = `${p.name || ""} ${p.description || ""} ${(p.tags || []).join(" ")}`.toLowerCase();
+        if (!hay.includes(needle)) return false;
+      }
+      if (onlyStock && !(p.stock > 0)) return false;
+      if (
+        onlyOffers &&
+        !(typeof p.compare_price_cents === "number" && p.compare_price_cents > p.price_cents)
+      ) {
+        return false;
+      }
+      if (Number.isFinite(max) && max > 0 && p.price_cents > max) return false;
+      return true;
     });
-  }, [products, q]);
+  }, [products, q, onlyStock, onlyOffers, maxPrice]);
+
+  function syncParams(patch: Record<string, string | null>) {
+    const next = new URLSearchParams(searchParams);
+    for (const [k, v] of Object.entries(patch)) {
+      if (v == null || v === "") next.delete(k);
+      else next.set(k, v);
+    }
+    setSearchParams(next, { replace: true });
+  }
 
   function onSearchChange(value: string) {
     setQ(value);
-    const next = new URLSearchParams(searchParams);
-    const trimmed = value.trim();
-    if (trimmed) next.set("q", trimmed);
-    else next.delete("q");
-    setSearchParams(next, { replace: true });
+    syncParams({ q: value.trim() || null });
   }
 
   async function addToCart(p: Product) {
@@ -138,23 +157,60 @@ export function Catalog() {
               </button>
             ) : null}
           </div>
+          <div className={styles.searchRow} style={{ marginTop: "0.5rem", flexWrap: "wrap", gap: "0.65rem" }}>
+            <label className={styles.muted} style={{ display: "inline-flex", gap: "0.35rem", alignItems: "center" }}>
+              <input
+                type="checkbox"
+                checked={onlyStock}
+                onChange={(e) => {
+                  setOnlyStock(e.target.checked);
+                  syncParams({ stock: e.target.checked ? "1" : null });
+                }}
+              />
+              Con stock
+            </label>
+            <label className={styles.muted} style={{ display: "inline-flex", gap: "0.35rem", alignItems: "center" }}>
+              <input
+                type="checkbox"
+                checked={onlyOffers}
+                onChange={(e) => {
+                  setOnlyOffers(e.target.checked);
+                  syncParams({ oferta: e.target.checked ? "1" : null });
+                }}
+              />
+              Solo ofertas
+            </label>
+            <label className={styles.muted} style={{ display: "inline-flex", gap: "0.35rem", alignItems: "center" }}>
+              Precio máx.
+              <input
+                className={styles.input}
+                style={{ width: 110, margin: 0 }}
+                inputMode="numeric"
+                placeholder="CLP"
+                value={maxPrice}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/\D/g, "");
+                  setMaxPrice(v);
+                  syncParams({ max: v || null });
+                }}
+              />
+            </label>
+          </div>
+          {!user ? (
+            <p className={styles.banner} style={{ marginTop: "0.65rem" }}>
+              Podés armar el carrito sin cuenta. Al pagar pedimos RUT y correo; si después iniciás sesión, se
+              guarda tu carrito.
+            </p>
+          ) : null}
           <p className={styles.searchHint}>
-            {q.trim() ? (
+            Mostrando <strong>{filteredProducts.length}</strong> de <strong>{products.length}</strong>
+            {tag ? (
               <>
-                Mostrando <strong>{filteredProducts.length}</strong> de <strong>{products.length}</strong>.
+                {" "}
+                · etiqueta <strong>{tag}</strong>
               </>
-            ) : (
-              <>
-                Productos: <strong>{products.length}</strong>
-                {tag ? (
-                  <>
-                    {" "}
-                    · etiqueta <strong>{tag}</strong>
-                  </>
-                ) : null}
-                . Busca por nombre o descripción.
-              </>
-            )}
+            ) : null}
+            .
           </p>
         </div>
       </section>

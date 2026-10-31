@@ -1,7 +1,7 @@
 {
   "name": "plasma-store",
   "private": true,
-  "version": "1.25.0",
+  "version": "1.27.0",
   "type": "module",
   "scripts": {
     "dev": "next dev -p 3000",
@@ -10,8 +10,11 @@
     "test": "node --test server/tests/**/*.test.mjs",
     "test:e2e": "playwright test",
     "create-admin": "node server/scripts/create-admin.mjs",
+    "create-staff": "node server/scripts/create-staff.mjs",
     "set-admin-password": "node server/scripts/set-admin-password.mjs",
     "import-pos-products": "node server/scripts/import-pos-products.mjs",
+    "backup-db": "node server/scripts/backup-db.mjs",
+    "restore-db": "node server/scripts/restore-db.mjs",
     "check-env": "node server/scripts/check-env.mjs",
     "db-ping": "node server/scripts/db-ping.mjs",
     "mongo-ping": "node server/scripts/db-ping.mjs",

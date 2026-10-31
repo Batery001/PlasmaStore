@@ -44,9 +44,18 @@ type Order = {
   };
 };
 
-type TabId = "perfil" | "info" | "compras" | "eventos" | "mazos" | "seguridad" | "privacidad";
+type TabId = "perfil" | "info" | "compras" | "deseos" | "eventos" | "mazos" | "seguridad" | "privacidad";
 
-const PROFILE_TABS: TabId[] = ["perfil", "info", "compras", "eventos", "mazos", "seguridad", "privacidad"];
+const PROFILE_TABS: TabId[] = ["perfil", "info", "compras", "deseos", "eventos", "mazos", "seguridad", "privacidad"];
+
+type WishItem = {
+  product_id: number;
+  name: string;
+  price_cents: number;
+  stock: number;
+  available?: boolean;
+  notify?: boolean;
+};
 
 function tabFromSearch(search: string): TabId | null {
   const raw = new URLSearchParams(search).get("tab");
@@ -95,7 +104,8 @@ function statusLabel(s: string | undefined) {
     pending_store_payment: "Pagar en tienda",
     paid: "Pagado",
     processing: "Procesando",
-    shipped: "Enviado",
+    ready_for_pickup: "Listo para retiro",
+    shipped: "En camino",
     completed: "Completado",
     cancelled: "Cancelado",
     refunded: "Reembolsado",
@@ -141,6 +151,7 @@ export function Profile() {
   const [tab, setTab] = useState<TabId>(() => tabFromSearch(location.search) || "perfil");
   const [profile, setProfile] = useState<StoreUser | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [wishlist, setWishlist] = useState<WishItem[]>([]);
   const [myEvents, setMyEvents] = useState<MyEvent[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
 
@@ -300,6 +311,36 @@ export function Profile() {
       })
       .catch((e) => setErr(e instanceof Error ? e.message : "Error"));
   }, [tab, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (tab !== "deseos") return;
+    fetch("/api/store/wishlist", { credentials: "include" })
+      .then((r) =>
+        parseResponseJson<{ ok?: boolean; items?: WishItem[]; error?: string }>(r).then((j) => ({ ok: r.ok, j }))
+      )
+      .then(({ ok, j }) => {
+        if (!ok || !j?.ok) throw new Error(j?.error || "No se pudo cargar la lista de deseos.");
+        setWishlist(Array.isArray(j.items) ? j.items : []);
+      })
+      .catch((e) => setErr(e instanceof Error ? e.message : "Error"));
+  }, [tab, user]);
+
+  async function removeWish(productId: number) {
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await fetch(`/api/store/wishlist/${productId}`, { method: "DELETE", credentials: "include" });
+      const j = await parseResponseJson<{ ok?: boolean; error?: string }>(r);
+      if (!r.ok || !j.ok) throw new Error(j.error || "No se pudo quitar.");
+      setWishlist((prev) => prev.filter((w) => w.product_id !== productId));
+      setMsg("Quitado de la lista de deseos.");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Error");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function saveProfile(e: FormEvent) {
     e.preventDefault();
@@ -500,6 +541,13 @@ export function Profile() {
           onClick={() => goTab("compras")}
         >
           Mis compras
+        </button>
+        <button
+          type="button"
+          className={`${styles.tab} ${tab === "deseos" ? styles.tabActive : ""}`}
+          onClick={() => goTab("deseos")}
+        >
+          Lista de deseos
         </button>
         <button
           type="button"
@@ -762,6 +810,46 @@ export function Profile() {
                     </button>
                   </div>
                 </form>
+              </div>
+            </section>
+          ) : null}
+
+          {tab === "deseos" ? (
+            <section className={styles.box}>
+              <h2 className={styles.boxHead}>Lista de deseos</h2>
+              <div className={styles.boxBody}>
+                {wishlist.length === 0 ? (
+                  <p className={`${styles.muted} ${styles.emptyHint}`}>
+                    Vacía. En productos agotados usa «Avisame» para enterarte del restock.
+                  </p>
+                ) : (
+                  <ul className={styles.orderList}>
+                    {wishlist.map((w) => (
+                      <li key={w.product_id} className={styles.orderRow}>
+                        <div>
+                          <strong>
+                            <Link to={`/producto/${w.product_id}`}>{w.name}</Link>
+                          </strong>
+                          <div className={styles.orderMeta}>
+                            {formatCLP(w.price_cents)} ·{" "}
+                            {w.available ? "Con stock" : "Agotado"}
+                            {w.notify !== false && !w.available ? " · aviso activo" : ""}
+                          </div>
+                        </div>
+                        <div className={styles.orderRight}>
+                          <button
+                            type="button"
+                            className={styles.btnGhost}
+                            disabled={busy}
+                            onClick={() => void removeWish(w.product_id)}
+                          >
+                            Quitar
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </section>
           ) : null}

@@ -4,7 +4,6 @@ import { resolveStoreMediaUrl } from "../lib/media";
 import { parseResponseJson } from "../lib/parseResponseJson";
 import { effectiveLinePricing } from "../lib/productPricing";
 import { CART_CHANGED_EVENT } from "../lib/cartEvents";
-import { usePosPopup } from "../pos/PosPopupContext";
 import adminStyles from "../admin/admin.module.css";
 
 type PosProduct = {
@@ -49,7 +48,6 @@ function linePricing(l: CartLine) {
 }
 
 export function AdminPosSale({ embedded = false }: { embedded?: boolean }) {
-  const posPopup = usePosPopup();
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
@@ -123,11 +121,6 @@ export function AdminPosSale({ embedded = false }: { embedded?: boolean }) {
     window.addEventListener(CART_CHANGED_EVENT, onChange);
     return () => window.removeEventListener(CART_CHANGED_EVENT, onChange);
   }, [importWebCart]);
-
-  useEffect(() => {
-    if (!posPopup.open) return;
-    void importWebCart();
-  }, [posPopup.open, importWebCart]);
 
   useEffect(() => {
     if (!catalogOpen) return;
@@ -399,7 +392,7 @@ export function AdminPosSale({ embedded = false }: { embedded?: boolean }) {
           </div>
         )}
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "center", marginTop: "1rem" }}>
+        <div className={adminStyles.posChargeBar}>
           <strong style={{ fontSize: "1.25rem" }}>Total {formatCLP(total)}</strong>
           <button type="button" className={adminStyles.btnPrimary} disabled={busy || !cart.length} onClick={() => charge("cash")}>
             Cobrar efectivo

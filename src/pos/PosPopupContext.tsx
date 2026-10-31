@@ -1,6 +1,8 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
+import { openPosWindow } from "./openPosWindow";
 
 type PosPopupApi = {
+  /** Siempre false: el POS ya no es overlay; se mantiene por compatibilidad. */
   open: boolean;
   minimized: boolean;
   everOpened: boolean;
@@ -12,29 +14,16 @@ type PosPopupApi = {
 const PosPopupContext = createContext<PosPopupApi | null>(null);
 
 export function PosPopupProvider({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const [minimized, setMinimized] = useState(false);
-  const [everOpened, setEverOpened] = useState(false);
-
   const show = useCallback(() => {
-    setEverOpened(true);
-    setMinimized(false);
-    setOpen(true);
+    openPosWindow();
   }, []);
 
-  const hide = useCallback(() => {
-    setOpen(false);
-    setMinimized(false);
-  }, []);
-
-  const minimize = useCallback(() => {
-    setOpen(false);
-    setMinimized(true);
-  }, []);
+  const hide = useCallback(() => {}, []);
+  const minimize = useCallback(() => {}, []);
 
   const value = useMemo(
-    () => ({ open, minimized, everOpened, show, hide, minimize }),
-    [open, minimized, everOpened, show, hide, minimize]
+    () => ({ open: false, minimized: false, everOpened: false, show, hide, minimize }),
+    [show, hide, minimize]
   );
 
   return <PosPopupContext.Provider value={value}>{children}</PosPopupContext.Provider>;

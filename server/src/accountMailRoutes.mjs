@@ -216,8 +216,18 @@ export async function sendOrderReceipt(db, order) {
   } catch {
     /* ignore */
   }
-  const base = String(process.env.PUBLIC_BASE_URL || "").replace(/\/+$/, "");
-  const boletaUrl = base ? `${base}/api/store/orders/${order._id}/boleta` : `/api/store/orders/${order._id}/boleta`;
+  let base = String(process.env.PUBLIC_BASE_URL || "").replace(/\/+$/, "");
+  try {
+    const { readPaymentSettings } = await import("./paymentSettings.mjs");
+    const pay = await readPaymentSettings(db);
+    if (pay?.public_base_url) base = String(pay.public_base_url).replace(/\/+$/, "");
+  } catch {
+    /* env fallback */
+  }
+  const { makeOrderAccessToken } = await import("./orderAccessToken.mjs");
+  const tok = makeOrderAccessToken({ orderId: order._id, purpose: "boleta" });
+  const path = `/api/store/orders/${order._id}/boleta?t=${encodeURIComponent(tok)}`;
+  const boletaUrl = base ? `${base}${path}` : path;
   const html = receiptEmailHtml({
     orderId: order._id,
     totalLabel,
@@ -268,12 +278,28 @@ const STATUS_LABELS = {
   pending_payment: "Pendiente de pago",
   paid: "Pagada",
   processing: "En preparación",
-  shipped: "Enviada",
+  ready_for_pickup: "Lista para retiro",
+  shipped: "En camino",
   completed: "Completada",
   cancelled: "Cancelada",
   refunded: "Reembolsada",
   payment_failed: "Pago fallido",
 };
+
+function statusHeadline(status, order) {
+  const method = String(order?.fulfillment?.method || "").toLowerCase();
+  if (status === "shipped") return "Tu pedido va en camino";
+  if (status === "ready_for_pickup") return "Tu pedido está listo para retirar";
+  if (status === "processing" && (method === "pickup" || method === "store_pickup" || method === "retiro")) {
+    return "Estamos preparando tu retiro";
+  }
+  if (status === "processing") return "Estamos preparando tu pedido";
+  if (status === "paid") return "Confirmamos tu pago";
+  if (status === "completed") return "Pedido completado";
+  if (status === "cancelled") return "Pedido cancelado";
+  if (status === "refunded") return "Reembolso registrado";
+  return "Actualización de tu pedido";
+}
 
 /**
  * Avisa al comprador cuando cambia el estado de la orden.
@@ -400,9 +426,19 @@ export async function sendOrderStatusUpdate(db, order, status, note = "") {
     tracking || proofUrl
       ? ` Seguimiento:${tracking ? ` ${tracking}` : ""}${proofUrl ? ` ${proofUrl}` : ""}.`
       : "";
+  const headline = statusHeadline(status, order);
+  const pickupHint =
+    status === "ready_for_pickup"
+      ? "<p>Ya puedes pasar a retirar tu pedido en tienda. Trae tu comprobante o el número de orden.</p>"
+      : "";
+  const shipHint =
+    status === "shipped"
+      ? "<p>Te avisaremos si hay novedades del envío. Revisa el seguimiento si está disponible abajo.</p>"
+      : "";
   const html = `<div style="font-family:system-ui,sans-serif;line-height:1.5;color:#1e293b">
-    <h2 style="margin:0 0 0.75rem">Actualización de tu pedido</h2>
+    <h2 style="margin:0 0 0.75rem">${headline}</h2>
     <p>Tu orden <strong>#${order._id}</strong> ahora está: <strong>${label}</strong>.</p>
+    ${pickupHint}${shipHint}
     ${noteText ? `<p><em>${noteText.replace(/</g, "&lt;")}</em></p>` : ""}
     ${trackingHtml}
     <p>Total: ${totalLabel}. Entrega: ${deliveryText.replace(/</g, "&lt;")}.</p>
@@ -411,7 +447,7 @@ export async function sendOrderStatusUpdate(db, order, status, note = "") {
   return sendMail(db, {
     to,
     subject: `Pedido #${order._id} · ${label}`,
-    text: `Tu orden #${order._id} está ${label}. Total ${totalLabel}. Entrega: ${deliveryText}.${noteText ? ` Nota: ${noteText}` : ""}${trackingText}`,
+    text: `${headline}. Orden #${order._id}: ${label}. Total ${totalLabel}. Entrega: ${deliveryText}.${noteText ? ` Nota: ${noteText}` : ""}${trackingText}`,
     html,
   });
 }

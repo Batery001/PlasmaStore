@@ -1,10 +1,13 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { usePosPopup } from "../pos/PosPopupContext";
+import { CART_CHANGED_EVENT } from "../lib/cartEvents";
+import { parseResponseJson } from "../lib/parseResponseJson";
 import { PlasmaOrbLogo } from "./PlasmaOrbLogo";
 import { CartNavIcon } from "./CartNavIcon";
 import { HeaderSearch } from "./HeaderSearch";
+import { WhatsAppFloat } from "../components/WhatsAppFloat";
 import styles from "./layout.module.css";
 
 type StoreTag = { id: number; name: string; slug: string; order?: number };
@@ -37,6 +40,18 @@ export function Layout() {
     about_title: "Quiénes somos",
     socials: [],
   });
+  const [cartCount, setCartCount] = useState(0);
+
+  const refreshCartCount = useCallback(() => {
+    fetch("/api/store/cart", { credentials: "include" })
+      .then(async (r) => parseResponseJson<{ items?: Array<{ quantity?: number }> }>(r))
+      .then((d) => {
+        const items = Array.isArray(d.items) ? d.items : [];
+        const n = items.reduce((acc, it) => acc + (parseInt(String(it.quantity ?? 0), 10) || 0), 0);
+        setCartCount(Math.max(0, n));
+      })
+      .catch(() => setCartCount(0));
+  }, []);
 
   const needsRut =
     Boolean(user) &&
@@ -51,6 +66,17 @@ export function Layout() {
       document.documentElement.removeAttribute("data-shell");
     };
   }, []);
+
+  useEffect(() => {
+    refreshCartCount();
+    const onChange = () => refreshCartCount();
+    window.addEventListener(CART_CHANGED_EVENT, onChange);
+    window.addEventListener("focus", onChange);
+    return () => {
+      window.removeEventListener(CART_CHANGED_EVENT, onChange);
+      window.removeEventListener("focus", onChange);
+    };
+  }, [refreshCartCount, user?.id]);
 
   useEffect(() => {
     let alive = true;
@@ -111,7 +137,6 @@ export function Layout() {
           <PlasmaOrbLogo className={styles.brandOrb} />
           <span className={styles.brandText}>Plasma Store</span>
         </Link>
-        <HeaderSearch cosmic={isLanding} />
         <nav className={`${styles.nav} ${isLanding ? styles.navCosmic : ""}`} aria-label="Tienda">
           <div className={styles.navDrop}>
             <Link to="/catalogo" className={styles.navDropTrigger}>
@@ -139,6 +164,7 @@ export function Layout() {
           {site.events_enabled ? <Link to="/eventos">Eventos</Link> : null}
           {site.about_enabled ? <Link to="/quienes-somos">{site.about_title}</Link> : null}
           {site.singles_enabled ? <Link to="/singles">Singles</Link> : null}
+          <Link to="/ayuda">Ayuda</Link>
           {loading ? (
             <span className={styles.muted}>…</span>
           ) : user ? (
@@ -146,17 +172,32 @@ export function Layout() {
               <Link to="/perfil" className={styles.navMiCuenta} title={user.name}>
                 Mi cuenta
               </Link>
-              <Link to="/carrito" className={styles.navCart}>
-                Carrito <CartNavIcon className={styles.navCartIcon} />
-              </Link>
-              {user.role === "admin" ? (
+              <div className={styles.navCartCluster}>
+                <Link to="/carrito" className={styles.navCart} aria-label={`Carrito${cartCount > 0 ? `, ${cartCount} ítems` : ""}`}>
+                  Carrito <CartNavIcon className={styles.navCartIcon} />
+                  {cartCount > 0 ? <span className={styles.navCartBadge}>{cartCount > 99 ? "99+" : cartCount}</span> : null}
+                </Link>
+                <HeaderSearch cosmic={isLanding} />
+              </div>
+              {user.role === "admin" || user.role === "staff" ? (
                 <>
-                  <button type="button" className={styles.navStaff} title="Abrir POS" onClick={() => pos.show()}>
+                  <button
+                    type="button"
+                    className={styles.navStaff}
+                    title="Abrir POS en ventana aparte"
+                    onClick={() => pos.show()}
+                  >
                     POS
                   </button>
-                  <Link to="/admin" className={styles.navStaff}>
-                    Panel
-                  </Link>
+                  {user.role === "admin" ? (
+                    <Link to="/admin" className={styles.navStaff}>
+                      Panel
+                    </Link>
+                  ) : (
+                    <Link to="/admin/ordenes" className={styles.navStaff}>
+                      Órdenes
+                    </Link>
+                  )}
                 </>
               ) : null}
               <button type="button" className={styles.linkbtn} onClick={() => logout()}>
@@ -166,9 +207,13 @@ export function Layout() {
           ) : (
             <>
               <Link to="/login">Entrar</Link>
-              <Link to="/carrito" className={styles.navCart}>
-                Carrito <CartNavIcon className={styles.navCartIcon} />
-              </Link>
+              <div className={styles.navCartCluster}>
+                <Link to="/carrito" className={styles.navCart} aria-label={`Carrito${cartCount > 0 ? `, ${cartCount} ítems` : ""}`}>
+                  Carrito <CartNavIcon className={styles.navCartIcon} />
+                  {cartCount > 0 ? <span className={styles.navCartBadge}>{cartCount > 99 ? "99+" : cartCount}</span> : null}
+                </Link>
+                <HeaderSearch cosmic={isLanding} />
+              </div>
             </>
           )}
         </nav>
@@ -193,6 +238,8 @@ export function Layout() {
           </div>
         ) : null}
         <div className={styles.footerLegal}>
+          <Link to="/ayuda">Cómo comprar</Link>
+          <span aria-hidden>·</span>
           <Link to="/privacidad">Privacidad</Link>
           <span aria-hidden>·</span>
           <Link to="/terminos">Términos</Link>
@@ -205,6 +252,7 @@ export function Layout() {
           Copyright © {new Date().getFullYear()} Plasma Store | Diseñada por Sebastian Vasquez
         </div>
       </footer>
+      <WhatsAppFloat />
     </div>
   );
 }

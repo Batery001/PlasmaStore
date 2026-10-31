@@ -49,6 +49,10 @@ export function Checkout() {
   const [termsOk, setTermsOk] = useState(false);
   const [tuuEnabled, setTuuEnabled] = useState(true);
   const [payMethod, setPayMethod] = useState<PayMethod>("tuu");
+  const [couponCode, setCouponCode] = useState("");
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponLabel, setCouponLabel] = useState("");
+  const [couponMsg, setCouponMsg] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -103,7 +107,7 @@ export function Checkout() {
   );
   const onlyEvents = (items || []).length > 0 && (items || []).every((i) => i.product_kind === "event" || Boolean(i.event_id));
   const shippingNow = !onlyEvents && method === "shipping" && chargeShippingOnline ? shippingFeeCents : 0;
-  const total = subtotal + shippingNow;
+  const total = Math.max(0, subtotal + shippingNow - couponDiscount);
 
   useEffect(() => {
     if (onlyEvents && method !== "pickup") setMethod("pickup");
@@ -171,6 +175,7 @@ export function Checkout() {
           fulfillment: payMethod === "store" ? { ...fulfillment, method: "pickup" } : fulfillment,
           terms_accepted: true,
           pay_provider: payMethod === "store" ? "store" : "tuu",
+          coupon_code: couponCode.trim() || undefined,
         }),
       });
       const j = await r.json().catch(() => ({}));
@@ -401,11 +406,66 @@ export function Checkout() {
         </p>
       </section>
 
+      <section className={styles.fulfillBox} aria-label="Cupón">
+        <h2 className={styles.subTitle} style={{ marginTop: 0 }}>
+          Cupón de descuento
+        </h2>
+        <div className={styles.searchRow}>
+          <input
+            className={styles.input}
+            value={couponCode}
+            onChange={(e) => {
+              setCouponCode(e.target.value.toUpperCase());
+              setCouponDiscount(0);
+              setCouponLabel("");
+              setCouponMsg(null);
+            }}
+            placeholder="Código"
+            autoComplete="off"
+          />
+          <button
+            type="button"
+            className={styles.btnGhost}
+            onClick={() => {
+              setCouponMsg(null);
+              fetch("/api/store/checkout/coupon/validate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ code: couponCode, subtotal_cents: subtotal }),
+              })
+                .then((r) => r.json().then((j) => ({ ok: r.ok, j })))
+                .then(({ ok, j }) => {
+                  if (!ok || !j?.ok) {
+                    setCouponDiscount(0);
+                    setCouponLabel("");
+                    setCouponMsg(j?.error || "Cupón inválido");
+                    return;
+                  }
+                  setCouponDiscount(j.coupon.discount_cents || 0);
+                  setCouponLabel(j.coupon.label || j.coupon.code);
+                  setCouponMsg(`Aplicado: ${j.coupon.label || j.coupon.code}`);
+                })
+                .catch(() => setCouponMsg("No se pudo validar el cupón"));
+            }}
+          >
+            Aplicar
+          </button>
+        </div>
+        {couponMsg ? <p className={styles.muted}>{couponMsg}</p> : null}
+      </section>
+
       <div className={styles.totalsBox}>
         <div className={styles.totalsRow}>
           <span>Subtotal productos</span>
           <strong>{formatCLP(subtotal)}</strong>
         </div>
+        {couponDiscount > 0 ? (
+          <div className={styles.totalsRow}>
+            <span>Descuento {couponLabel ? `(${couponLabel})` : ""}</span>
+            <strong>-{formatCLP(couponDiscount)}</strong>
+          </div>
+        ) : null}
         {method === "shipping" ? (
           <div className={styles.totalsRow}>
             <span>Envío Starken</span>

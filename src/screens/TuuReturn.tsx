@@ -11,6 +11,7 @@ function useQuery() {
 export function TuuReturn() {
   const q = useQuery();
   const ref = q.get("ref") || "";
+  const accessTok = q.get("t") || "";
   const resultHint = (q.get("result") || "").toLowerCase();
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "fail">("idle");
   const [msg, setMsg] = useState<string | null>(null);
@@ -33,7 +34,9 @@ export function TuuReturn() {
     let attempts = 0;
 
     const tick = () => {
-      fetch(`/api/store/checkout/tuu/status?ref=${encodeURIComponent(ref)}`, { credentials: "include" })
+      const qs = new URLSearchParams({ ref });
+      if (accessTok) qs.set("t", accessTok);
+      fetch(`/api/store/checkout/tuu/status?${qs.toString()}`, { credentials: "include" })
         .then(async (r) => {
           const j = await r.json().catch(() => ({}));
           if (!r.ok || !j.ok) throw new Error(j.error || "No se pudo confirmar el pago TUU.");

@@ -215,8 +215,18 @@ function InventoryMovementsPanel() {
   );
 }
 
+type OpsSummary = {
+  orders_today: number;
+  revenue_today_cents: number;
+  pending_pickup: number;
+  pending_shipping: number;
+  low_stock: number;
+  out_of_stock: number;
+};
+
 export function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [ops, setOps] = useState<OpsSummary | null>(null);
   const [finance, setFinance] = useState<Finance | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [finErr, setFinErr] = useState<string | null>(null);
@@ -265,6 +275,14 @@ export function AdminDashboard() {
         if (!cancelled) setError(e instanceof Error ? e.message : "Error");
       }
     })();
+    fetch("/api/store/admin/ops-summary", { credentials: "include" })
+      .then((r) => r.json().then((j) => ({ ok: r.ok, j })))
+      .then(({ ok, j }) => {
+        if (!cancelled && ok && j?.ok) setOps(j.summary || null);
+      })
+      .catch(() => {
+        /* ignore */
+      });
     return () => {
       cancelled = true;
     };
@@ -302,6 +320,28 @@ export function AdminDashboard() {
   return (
     <div>
       <h1 className={adminStyles.pageTitle}>Panel de inicio</h1>
+      {ops ? (
+        <div className={adminStyles.statsGrid} style={{ marginBottom: "1rem" }}>
+          <div className={adminStyles.statCard}>
+            <div className={adminStyles.statLabel}>Ventas hoy</div>
+            <div className={adminStyles.statValue}>{ops.orders_today}</div>
+            <div className={adminStyles.statHint}>{formatCLP(ops.revenue_today_cents)}</div>
+          </div>
+          <div className={adminStyles.statCard}>
+            <div className={adminStyles.statLabel}>Retiros pendientes</div>
+            <div className={adminStyles.statValue}>{ops.pending_pickup}</div>
+          </div>
+          <div className={adminStyles.statCard}>
+            <div className={adminStyles.statLabel}>Envíos activos</div>
+            <div className={adminStyles.statValue}>{ops.pending_shipping}</div>
+          </div>
+          <div className={adminStyles.statCard}>
+            <div className={adminStyles.statLabel}>Stock crítico</div>
+            <div className={adminStyles.statValue}>{ops.low_stock}</div>
+            <div className={adminStyles.statHint}>Sin stock: {ops.out_of_stock}</div>
+          </div>
+        </div>
+      ) : null}
       <p className={adminStyles.pageLead}>
         Resumen de la tienda, inversión en stock y recuperación por ventas (web + caja).
       </p>

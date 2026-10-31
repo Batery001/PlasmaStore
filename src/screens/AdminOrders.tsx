@@ -62,7 +62,8 @@ export function AdminOrders() {
       pending_payment: "Pendiente pago",
       paid: "Pagado",
       processing: "Procesando",
-      shipped: "Enviado",
+      ready_for_pickup: "Listo para retiro",
+      shipped: "En camino",
       completed: "Completado",
       cancelled: "Cancelado",
       refunded: "Reembolsado",
@@ -443,7 +444,7 @@ export function AdminOrders() {
                 >
                   Adjuntar
                 </button>
-                {["processing", "shipped", "completed", "cancelled", "refunded"].map((s) => (
+                {["processing", "ready_for_pickup", "shipped", "completed", "cancelled", "refunded"].map((s) => (
                   <button key={s} type="button" className={adminStyles.btnPrimary} disabled={busy} onClick={() => setStatus(s)}>
                     {statusLabel(s)}
                   </button>

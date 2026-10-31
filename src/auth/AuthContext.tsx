@@ -13,7 +13,7 @@ export type StoreUser = {
   id: number;
   email: string;
   name: string;
-  role: "customer" | "admin";
+  role: "customer" | "admin" | "staff";
   username?: string | null;
   first_name?: string | null;
   last_name?: string | null;

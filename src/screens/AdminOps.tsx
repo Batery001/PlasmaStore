@@ -218,6 +218,11 @@ export function AdminOps() {
         <a className={adminStyles.btnPrimary} href="/api/store/admin/backup" style={{ display: "inline-block" }}>
           Descargar backup
         </a>
+        <p className={adminStyles.muted} style={{ marginTop: "0.85rem" }}>
+          En el VPS también puedes programar: <code>npm run backup-db</code> (guarda en{" "}
+          <code>server/data/backups/</code>, conserva 14 por defecto). Para restaurar SQLite: detén el servidor y{" "}
+          <code>CONFIRM=YES npm run restore-db -- ruta/al/backup.sqlite</code>.
+        </p>
       </div>
 
       <div className={adminStyles.panelCard} style={{ marginTop: "1rem" }}>

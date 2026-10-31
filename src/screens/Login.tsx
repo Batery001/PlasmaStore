@@ -75,6 +75,11 @@ export function Login() {
   return (
     <div className={styles.narrow}>
       <h1 className={styles.pageTitle}>{pendingToken ? "Verificación 2FA" : "Entrar"}</h1>
+      {!pendingToken ? (
+        <p className={styles.banner}>
+          Si tenías productos en el carrito como invitado, al entrar se guardan en tu cuenta.
+        </p>
+      ) : null}
       <form className={styles.form} onSubmit={(e) => void onSubmit(e)}>
         {!pendingToken ? (
           <>

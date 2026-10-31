@@ -8,6 +8,10 @@ import { Environment, IntegrationApiKeys, IntegrationCommerceCodes, Options, Web
 import { nextSeq } from "./counters.mjs";
 import { clearSessionCookie, makeGuestCookie, makeSessionCookie, newGuestId, readGuestId, readSession } from "./session.mjs";
 import { mergeGuestCartIntoUser } from "./cartMerge.mjs";
+import { makeOrderAccessToken, verifyOrderAccessToken } from "./orderAccessToken.mjs";
+import { incrementCouponUse, normalizeCouponCode, validateCoupon } from "./coupons.mjs";
+import { addWishlist, listWishlist, removeWishlist } from "./wishlist.mjs";
+import { maybeNotifyWishlistRestock } from "./restockNotify.mjs";
 import {
   RESERVATION_TTL_MS,
   STOCK_GONE_MSG,
@@ -341,6 +345,15 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
     return u;
   }
 
+  /** Admin o staff (caja / pedidos). */
+  async function requireStaff(req) {
+    const u = await requireUser(req);
+    if (u.role !== "admin" && u.role !== "staff") {
+      throw Object.assign(new Error("Solo personal de tienda."), { status: 403 });
+    }
+    return u;
+  }
+
   /** Usuario logueado o invitado (cookie ps_guest). */
   async function resolveCartActor(req, res) {
     try {
@@ -382,10 +395,19 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
       return { inventoryApplied: true, inventoryWarning: null, alreadySettled: true };
     }
 
-    await db.collection("store_orders").updateOne(
-      { _id: order._id },
+    // Claim atómico: evita doble stock / mails si llegan 2 callbacks a la vez.
+    const claim = await db.collection("store_orders").updateOne(
+      { _id: order._id, status: { $nin: ["paid", "refunded", "completed"] } },
       { $set: { status: "paid", updatedAt: now, ...extraSet } }
     );
+    if (!claim.matchedCount) {
+      const cur = await db.collection("store_orders").findOne({ _id: order._id });
+      if (cur?.status === "paid" || cur?.status === "completed" || cur?.status === "refunded") {
+        return { inventoryApplied: Boolean(cur.inventory_applied), inventoryWarning: null, alreadySettled: true };
+      }
+      throw Object.assign(new Error("No se pudo confirmar el pago (estado inválido)."), { status: 409 });
+    }
+    order = { ...order, status: "paid", ...(extraSet || {}) };
 
     if (order.channel === "event" || order.event_registration_id) {
       inventoryApplied = true;
@@ -558,6 +580,17 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
           { _id: order._id },
           { $set: { event_cups_recorded: true, updatedAt: now } }
         );
+      }
+      if (settledEvent?.coupon?.code && !settledEvent.coupon_consumed) {
+        try {
+          await incrementCouponUse(db, settledEvent.coupon.code);
+          await db.collection("store_orders").updateOne(
+            { _id: order._id },
+            { $set: { coupon_consumed: true, updatedAt: now } }
+          );
+        } catch (couponErr) {
+          console.warn("[coupon]", couponErr instanceof Error ? couponErr.message : couponErr);
+        }
       }
     }
 
@@ -2229,7 +2262,23 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
       const shipCfg = await readShippingSettings(db);
       const shipping_fee_cents =
         method === "shipping" && shipCfg.charge_shipping_online ? shipCfg.shipping_fee_cents : 0;
-      const total = subtotal + shipping_fee_cents;
+      let discount_cents = 0;
+      /** @type {null | { code: string, discount_cents: number, type: string, value: unknown, label: string }} */
+      let couponInfo = null;
+      const couponRaw = String(req.body?.coupon_code || req.body?.fulfillment?.coupon_code || "").trim();
+      if (couponRaw) {
+        const cv = await validateCoupon(db, couponRaw, subtotal);
+        if (!cv.ok) return res.status(400).json({ ok: false, error: cv.error || "Cupón inválido." });
+        discount_cents = cv.discount_cents;
+        couponInfo = {
+          code: cv.code,
+          discount_cents: cv.discount_cents,
+          type: cv.type,
+          value: cv.value,
+          label: cv.label,
+        };
+      }
+      const total = Math.max(0, subtotal + shipping_fee_cents - discount_cents);
       if (!Number.isFinite(total) || total < 0) return res.status(400).json({ ok: false, error: "Total inválido." });
       if (total > 0 && total < 50) return res.status(400).json({ ok: false, error: "Total inválido." });
 
@@ -2268,9 +2317,16 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
       const payProvider =
         payRaw === "store" || payRaw === "tienda"
           ? "store"
-          : payRaw === "tuu" || pathHint.includes("/tuu/")
+          : payRaw === "tuu" || pathHint.includes("/tuu/") || !pathHint.includes("/webpay/")
             ? "tuu"
             : "webpay";
+
+      if (payProvider === "webpay") {
+        return res.status(410).json({
+          ok: false,
+          error: "Webpay está desactivado. Usa TUU Pago Online o pago en tienda.",
+        });
+      }
 
       if (payProvider === "store" && method !== "pickup") {
         return res.status(400).json({
@@ -2334,6 +2390,8 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
           status: "pending_store_payment",
           currency: "CLP",
           subtotal_cents: subtotal,
+          discount_cents,
+          coupon: couponInfo,
           shipping_fee_cents: 0,
           total_cents: total,
           items: pricedItems,
@@ -2380,6 +2438,8 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
         status: "pending_payment",
         currency: "CLP",
         subtotal_cents: subtotal,
+        discount_cents,
+        coupon: couponInfo,
         shipping_fee_cents,
         total_cents: total,
         items: pricedItems,
@@ -2865,10 +2925,17 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
     if (!order) throw Object.assign(new Error("Orden no encontrada."), { status: 404 });
     const paidAmount = parseInt(String(params.x_amount || ""), 10);
     const expectedAmount = Math.round(Number(order.total_cents) || 0);
-    if (Number.isFinite(paidAmount) && paidAmount > 0 && paidAmount !== expectedAmount) {
+    const result = params.x_result;
+    if (tuuResultApproved(result)) {
+      if (!Number.isFinite(paidAmount) || paidAmount <= 0) {
+        throw Object.assign(new Error("Notificación TUU sin monto válido."), { status: 400 });
+      }
+      if (paidAmount !== expectedAmount) {
+        throw Object.assign(new Error("Monto TUU no coincide con la orden."), { status: 400 });
+      }
+    } else if (Number.isFinite(paidAmount) && paidAmount > 0 && paidAmount !== expectedAmount) {
       throw Object.assign(new Error("Monto TUU no coincide con la orden."), { status: 400 });
     }
-    const result = params.x_result;
     const extra = { "payment.notify": params, "payment.result": result || null };
     if (tuuResultApproved(result)) {
       const settled = await settleApprovedOrder(db, order, extra);
@@ -2930,6 +2997,14 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
       const qs = new URLSearchParams();
       if (ref) qs.set("ref", ref);
       if (result) qs.set("result", result);
+      try {
+        const order = ref ? await findOrderByTuuReference(db, ref) : null;
+        if (order?._id) {
+          qs.set("t", makeOrderAccessToken({ orderId: order._id, purpose: "order_status", ttlSec: 60 * 60 * 24 }));
+        }
+      } catch {
+        /* ignore */
+      }
       return res.redirect(303, `${base}/tuu/return?${qs.toString()}`);
     } catch (e) {
       handleErr(res, e);
@@ -2942,15 +3017,30 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
       const base = await resolvePublicBaseUrl(req, db);
       const params = collectTuuParams({ ...(req.query || {}), ...(req.body || {}) });
       const ref = params.x_reference || "";
-      if (ref) {
+      const cfg = await readPaymentSettings(db);
+      const tuu = resolveTuuCredentials(cfg);
+      const got = String(params.x_signature || "");
+      const expected = signTuuParams(params, tuu.secret);
+      // Sin firma válida no marcamos la orden como fallida (evita abuso con solo el ref).
+      if (ref && got && signaturesMatch(got, expected)) {
         const order = await findOrderByTuuReference(db, ref);
         if (order && order.status !== "paid") {
           await failPendingOrder(db, order, "tuu_cancelled");
         }
+      } else if (ref && !got) {
+        console.warn("[tuu-cancel] sin firma; solo redirect", ref);
       }
       const qs = new URLSearchParams();
       if (ref) qs.set("ref", ref);
       qs.set("result", "cancelled");
+      try {
+        const order = ref ? await findOrderByTuuReference(db, ref) : null;
+        if (order?._id) {
+          qs.set("t", makeOrderAccessToken({ orderId: order._id, purpose: "order_status", ttlSec: 60 * 60 * 24 }));
+        }
+      } catch {
+        /* ignore */
+      }
       return res.redirect(303, `${base}/tuu/return?${qs.toString()}`);
     } catch (e) {
       handleErr(res, e);
@@ -2962,20 +3052,30 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
       const actor = await resolveCartActor(req, res);
       const db = await getDb();
       const ref = String(req.query?.ref || req.query?.reference || "").trim();
+      const accessTok = String(req.query?.t || req.query?.token || "").trim();
       const order = await findOrderByTuuReference(db, ref);
       if (!order) return res.status(404).json({ ok: false, error: "Orden no encontrada." });
       let allowed = false;
       if (actor.kind === "user" && Number(order.user_id) === Number(actor.userId)) allowed = true;
       if (actor.kind === "guest" && order.guest_id && order.guest_id === actor.guestId) allowed = true;
+      if (!allowed && accessTok) {
+        const v = verifyOrderAccessToken(accessTok, "order_status");
+        if (v && Number(v.orderId) === Number(order._id)) allowed = true;
+      }
       if (!allowed) return res.status(403).json({ ok: false, error: "Sin acceso a esta orden." });
       const approved = order.status === "paid";
+      let boletaUrl = null;
+      if (approved) {
+        const bt = makeOrderAccessToken({ orderId: order._id, purpose: "boleta" });
+        boletaUrl = `/api/store/orders/${order._id}/boleta?t=${encodeURIComponent(bt)}`;
+      }
       res.json({
         ok: true,
         approved,
         pending: order.status === "pending_payment",
         status: order.status,
         orderId: order._id,
-        boletaUrl: approved ? `/api/store/orders/${order._id}/boleta` : null,
+        boletaUrl,
         inventoryApplied: Boolean(order.inventory_applied),
         inventoryWarning: order.inventory_error || order.stock_conflict_msg || null,
         stockMessage: order.inventory_error || order.stock_conflict_msg || null,
@@ -3331,7 +3431,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
 
   app.get("/api/store/admin/orders", async (req, res) => {
     try {
-      await requireAdmin(req);
+      await requireStaff(req);
       const db = await getDb();
       const orders = await db
         .collection("store_orders")
@@ -3347,7 +3447,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
 
   app.get("/api/store/admin/orders/:id", async (req, res) => {
     try {
-      await requireAdmin(req);
+      await requireStaff(req);
       const db = await getDb();
       const id = parseInt(String(req.params.id), 10);
       if (!Number.isFinite(id) || id < 1) return res.status(400).json({ ok: false, error: "id inválido." });
@@ -3364,7 +3464,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
 
   app.post("/api/store/admin/orders/:id/status", async (req, res) => {
     try {
-      const admin = await requireAdmin(req);
+      const admin = await requireStaff(req);
       const db = await getDb();
       const id = parseInt(String(req.params.id), 10);
       if (!Number.isFinite(id) || id < 1) return res.status(400).json({ ok: false, error: "id inválido." });
@@ -3373,6 +3473,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
         "pending_payment",
         "paid",
         "processing",
+        "ready_for_pickup",
         "shipped",
         "completed",
         "cancelled",
@@ -3400,7 +3501,15 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
       const order = await db.collection("store_orders").findOne({ _id: id });
       let mail = null;
       if (order && prevOrder && String(prevOrder.status) !== next) {
-        const notifyStatuses = new Set(["paid", "processing", "shipped", "completed", "cancelled", "refunded"]);
+        const notifyStatuses = new Set([
+          "paid",
+          "processing",
+          "ready_for_pickup",
+          "shipped",
+          "completed",
+          "cancelled",
+          "refunded",
+        ]);
         if (notifyStatuses.has(next)) {
           try {
             mail = await sendOrderStatusUpdate(db, order, next, String(req.body?.note || "").trim());
@@ -3520,9 +3629,14 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
       if (!order) return res.status(404).json({ ok: false, error: "Orden no encontrada." });
 
       let allowed = false;
+      const accessTok = String(req.query?.t || req.query?.token || "").trim();
+      if (accessTok) {
+        const v = verifyOrderAccessToken(accessTok, "boleta");
+        if (v && Number(v.orderId) === id) allowed = true;
+      }
       try {
         const u = await requireUser(req);
-        if (u.role === "admin" || Number(order.user_id) === Number(u.id)) allowed = true;
+        if (u.role === "admin" || u.role === "staff" || Number(order.user_id) === Number(u.id)) allowed = true;
       } catch {
         /* guest / no sesión */
       }
@@ -3601,6 +3715,9 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
         "event_registrations",
         "store_tags",
         "cart_items",
+        "store_wishlist",
+        "store_coupons",
+        "stock_movements",
       ];
       /** @type {Record<string, unknown[]>} */
       const dump = {};
@@ -4117,6 +4234,156 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
     }
   });
 
+  app.post("/api/store/checkout/coupon/validate", async (req, res) => {
+    try {
+      const db = await getDb();
+      const code = String(req.body?.code || "").trim();
+      const subtotal = Math.max(0, parseInt(String(req.body?.subtotal_cents ?? 0), 10) || 0);
+      const v = await validateCoupon(db, code, subtotal);
+      if (!v.ok) return res.status(400).json({ ok: false, error: v.error });
+      res.json({ ok: true, coupon: v });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  app.get("/api/store/wishlist", async (req, res) => {
+    try {
+      const u = await requireUser(req);
+      const db = await getDb();
+      const items = await listWishlist(db, u.id);
+      res.json({ ok: true, items });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  app.post("/api/store/wishlist", async (req, res) => {
+    try {
+      const u = await requireUser(req);
+      const db = await getDb();
+      const productId = parseInt(String(req.body?.productId), 10);
+      if (!Number.isFinite(productId) || productId < 1) {
+        return res.status(400).json({ ok: false, error: "productId inválido." });
+      }
+      await addWishlist(db, u.id, productId, u.email);
+      res.json({ ok: true });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  app.delete("/api/store/wishlist/:productId", async (req, res) => {
+    try {
+      const u = await requireUser(req);
+      const db = await getDb();
+      const productId = parseInt(String(req.params.productId), 10);
+      await removeWishlist(db, u.id, productId);
+      res.json({ ok: true });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  app.get("/api/store/admin/coupons", async (req, res) => {
+    try {
+      await requireAdmin(req);
+      const db = await getDb();
+      const rows = await db.collection("store_coupons").find({}).sort({ createdAt: -1 }).limit(200).toArray();
+      res.json({
+        ok: true,
+        coupons: rows.map((r) => ({
+          id: r._id,
+          code: r.code,
+          type: r.type,
+          value: r.value,
+          label: r.label || "",
+          active: r.active !== false,
+          max_uses: r.max_uses || 0,
+          used_count: r.used_count || 0,
+          min_subtotal_cents: r.min_subtotal_cents || 0,
+          starts_at: r.starts_at || null,
+          ends_at: r.ends_at || null,
+        })),
+      });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  app.post("/api/store/admin/coupons", async (req, res) => {
+    try {
+      await requireAdmin(req);
+      const db = await getDb();
+      const code = normalizeCouponCode(req.body?.code);
+      if (!code || code.length < 3) return res.status(400).json({ ok: false, error: "Código muy corto." });
+      const type = String(req.body?.type || "percent") === "fixed" ? "fixed" : "percent";
+      const value = Number(req.body?.value);
+      if (!Number.isFinite(value) || value <= 0) return res.status(400).json({ ok: false, error: "Valor inválido." });
+      const now = new Date();
+      const id = await nextSeq(db, "coupon");
+      await db.collection("store_coupons").insertOne({
+        _id: id,
+        code,
+        type,
+        value,
+        label: String(req.body?.label || code).trim().slice(0, 80),
+        active: req.body?.active !== false,
+        max_uses: Math.max(0, parseInt(String(req.body?.max_uses ?? 0), 10) || 0),
+        used_count: 0,
+        min_subtotal_cents: Math.max(0, parseInt(String(req.body?.min_subtotal_cents ?? 0), 10) || 0),
+        starts_at: req.body?.starts_at ? new Date(String(req.body.starts_at)) : null,
+        ends_at: req.body?.ends_at ? new Date(String(req.body.ends_at)) : null,
+        createdAt: now,
+        updatedAt: now,
+      });
+      res.json({ ok: true, id, code });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  app.get("/api/store/admin/ops-summary", async (req, res) => {
+    try {
+      await requireStaff(req);
+      const db = await getDb();
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const paidToday = await db
+        .collection("store_orders")
+        .find({ status: { $in: ["paid", "processing", "shipped", "completed"] }, updatedAt: { $gte: start } })
+        .project({ total_cents: 1, status: 1, fulfillment: 1 })
+        .toArray();
+      const pendingPickup = await db.collection("store_orders").countDocuments({
+        status: { $in: ["paid", "processing"] },
+        "fulfillment.method": "pickup",
+      });
+      const pendingShip = await db.collection("store_orders").countDocuments({
+        status: { $in: ["paid", "processing", "shipped"] },
+        "fulfillment.method": "shipping",
+      });
+      const lowStock = await db.collection("products").countDocuments({
+        active: { $ne: 0 },
+        stock: { $gt: 0, $lte: 3 },
+      });
+      const outStock = await db.collection("products").countDocuments({ active: { $ne: 0 }, stock: { $lte: 0 } });
+      const revenueToday = paidToday.reduce((s, o) => s + (parseInt(String(o.total_cents || 0), 10) || 0), 0);
+      res.json({
+        ok: true,
+        summary: {
+          orders_today: paidToday.length,
+          revenue_today_cents: revenueToday,
+          pending_pickup: pendingPickup,
+          pending_shipping: pendingShip,
+          low_stock: lowStock,
+          out_of_stock: outStock,
+        },
+      });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
   app.get("/api/store/admin/stats", async (req, res) => {
     try {
       await requireAdmin(req);
@@ -4578,7 +4845,13 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
         stock_after: next,
       });
       const product = await db.collection("products").findOne({ _id: productId });
-      res.json({ ok: true, product: publicAdminProduct(product), delta: applied });
+      let restock_mail = null;
+      try {
+        restock_mail = await maybeNotifyWishlistRestock(db, product, prev, next);
+      } catch (e) {
+        restock_mail = { ok: false, error: e instanceof Error ? e.message : String(e) };
+      }
+      res.json({ ok: true, product: publicAdminProduct(product), delta: applied, restock_mail });
     } catch (e) {
       handleErr(res, e);
     }
@@ -4586,7 +4859,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
 
   app.get("/api/store/admin/products", async (req, res) => {
     try {
-      await requireAdmin(req);
+      await requireStaff(req);
       const db = await getDb();
       const rows = await db.collection("products").find({}).sort({ _id: 1 }).toArray();
       res.json({
@@ -4803,6 +5076,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
       const prevStock = Math.max(0, parseInt(String(prevRow.stock ?? 0), 10) || 0);
       await db.collection("products").updateOne({ _id: id }, { $set });
       const product = await db.collection("products").findOne({ _id: id });
+      let restock_mail = null;
       if (product && typeof $set.stock === "number") {
         const nextStock = Math.max(0, parseInt(String(product.stock ?? 0), 10) || 0);
         const delta = nextStock - prevStock;
@@ -4816,10 +5090,16 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
             stock_after: nextStock,
           });
         }
+        try {
+          restock_mail = await maybeNotifyWishlistRestock(db, product, prevStock, nextStock);
+        } catch (e) {
+          restock_mail = { ok: false, error: e instanceof Error ? e.message : String(e) };
+        }
       }
       res.json({
         ok: true,
         product: publicAdminProduct(product),
+        restock_mail,
       });
     } catch (e) {
       handleErr(res, e);
@@ -4999,7 +5279,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
   // =========================
   app.get("/api/store/admin/pos/lookup", async (req, res) => {
     try {
-      await requireAdmin(req);
+      await requireStaff(req);
       const db = await getDb();
       await expireReservations(db);
       const q = String(req.query?.q || "").trim();
@@ -5035,7 +5315,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
 
   app.post("/api/store/admin/pos/sale", async (req, res) => {
     try {
-      const admin = await requireAdmin(req);
+      const admin = await requireStaff(req);
       const db = await getDb();
       await expireReservations(db);
 

@@ -543,6 +543,25 @@
   .fulfillRow2 {
     grid-template-columns: 1fr;
   }
+
+  .fulfillChoices {
+    grid-template-columns: 1fr;
+  }
+
+  .fulfillChoice {
+    min-height: 3rem;
+    padding: 0.95rem 1rem;
+  }
+
+  .checkoutSummaryList li {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
+  }
+
+  .totalsBox {
+    max-width: none;
+  }
 }
 
 .totalsBox {

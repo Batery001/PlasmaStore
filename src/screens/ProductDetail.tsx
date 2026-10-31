@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { resolveStoreMediaUrl } from "../lib/media";
 import { parseResponseJson } from "../lib/parseResponseJson";
 import { formatCLP } from "../lib/money";
+import { useAuth } from "../auth/AuthContext";
 import { notifyCartChanged } from "../lib/cartEvents";
 import styles from "./pages.module.css";
 
@@ -20,11 +21,13 @@ type Product = {
 export function ProductDetail() {
   const { id } = useParams();
   const pid = useMemo(() => parseInt(String(id || ""), 10), [id]);
+  const { user } = useAuth();
   const [p, setP] = useState<Product | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const [msg, setMsg] = useState<string | null>(null);
   const [activeImg, setActiveImg] = useState<string | null>(null);
+  const [wishMsg, setWishMsg] = useState<string | null>(null);
 
   const imgList = useMemo(() => {
     if (!p) return [];
@@ -154,7 +157,35 @@ export function ProductDetail() {
               <button type="button" className={styles.detailBtnDark} onClick={() => addToCart(true)} disabled={p.stock < 1}>
                 Comprar ahora
               </button>
+              {p.stock < 1 ? (
+                <button
+                  type="button"
+                  className={styles.btnGhost}
+                  onClick={() => {
+                    setWishMsg(null);
+                    if (!user) {
+                      setWishMsg("Inicia sesión para avisar cuando vuelva stock.");
+                      return;
+                    }
+                    fetch("/api/store/wishlist", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      credentials: "include",
+                      body: JSON.stringify({ productId: p.id }),
+                    })
+                      .then((r) => r.json().then((j) => ({ ok: r.ok, j })))
+                      .then(({ ok, j }) => {
+                        if (!ok || !j?.ok) setWishMsg(j?.error || "No se pudo guardar");
+                        else setWishMsg("Te avisaremos cuando vuelva stock (lista de deseos).");
+                      })
+                      .catch(() => setWishMsg("No se pudo guardar"));
+                  }}
+                >
+                  Avisame
+                </button>
+              ) : null}
             </div>
+            {wishMsg ? <p className={styles.muted}>{wishMsg}</p> : null}
 
             <div className={styles.detailQtyRow}>
               <span className={styles.detailQtyLabel}>Cantidad</span>

@@ -17,6 +17,8 @@ const AdminSiteContent = lazy(() =>
 );
 const AdminEvents = lazy(() => import("../screens/AdminEvents").then((m) => ({ default: m.AdminEvents })));
 const AdminOps = lazy(() => import("../screens/AdminOps").then((m) => ({ default: m.AdminOps })));
+const AdminCoupons = lazy(() => import("../screens/AdminCoupons").then((m) => ({ default: m.AdminCoupons })));
+const AdminPosPage = lazy(() => import("../screens/AdminPosPage").then((m) => ({ default: m.AdminPosPage })));
 
 function Lazy({ children }: { children: ReactNode }) {
   return (
@@ -26,6 +28,14 @@ function Lazy({ children }: { children: ReactNode }) {
 
 /** Backoffice: no se descarga al abrir la tienda. */
 export const adminRoutes: RouteObject[] = [
+  {
+    path: "/admin/pos",
+    element: (
+      <Lazy>
+        <AdminPosPage />
+      </Lazy>
+    ),
+  },
   {
     path: "/admin",
     element: (
@@ -43,7 +53,7 @@ export const adminRoutes: RouteObject[] = [
           </Lazy>
         ),
       },
-      { path: "venta", element: <Navigate to="/admin/panel" replace /> },
+      { path: "venta", element: <Navigate to="/admin/pos" replace /> },
       {
         path: "productos",
         element: (
@@ -109,6 +119,14 @@ export const adminRoutes: RouteObject[] = [
         element: (
           <Lazy>
             <AdminPayments />
+          </Lazy>
+        ),
+      },
+      {
+        path: "cupones",
+        element: (
+          <Lazy>
+            <AdminCoupons />
           </Lazy>
         ),
       },
