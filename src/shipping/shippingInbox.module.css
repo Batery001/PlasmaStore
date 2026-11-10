@@ -1,0 +1,128 @@
+.fabMail {
+  position: fixed;
+  right: 1.1rem;
+  bottom: calc(1.1rem + 3.6rem + 0.75rem);
+  z-index: 1301;
+  background: linear-gradient(180deg, #0ea5e9, #0369a1);
+  box-shadow: 0 10px 28px rgba(3, 105, 161, 0.45);
+  min-width: 3.4rem;
+  font-size: 1.15rem;
+}
+
+.fabBadge {
+  position: absolute;
+  top: -0.2rem;
+  right: -0.15rem;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  padding: 0 0.28rem;
+  border-radius: 999px;
+  background: #fbbf24;
+  color: #0f172a;
+  font-size: 0.68rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.inboxWindow {
+  width: min(520px, 96vw);
+}
+
+.sectionTitle {
+  margin: 0.35rem 0 0.55rem;
+  font-size: 0.85rem;
+  color: #475569;
+  font-weight: 700;
+}
+
+.empty {
+  margin: 0 0 1rem;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.error {
+  margin: 0 0 0.75rem;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+.list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.card {
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 10px;
+  padding: 0.7rem 0.75rem;
+  background: #fff;
+}
+
+.cardMuted {
+  opacity: 0.88;
+  background: #f8fafc;
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.meta {
+  font-size: 0.88rem;
+  color: #334155;
+}
+
+.addr {
+  margin-top: 0.25rem;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+.btnPrimary,
+.btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.45rem 0.7rem;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.btnPrimary {
+  background: #0284c7;
+  color: #fff;
+}
+
+.btnPrimary:disabled,
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.btn:hover,
+.btnPrimary:hover {
+  filter: brightness(1.05);
+}

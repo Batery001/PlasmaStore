@@ -3445,6 +3445,61 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
     }
   });
 
+  /** Pedidos web a domicilio pendientes de despacho (buzón de envíos). */
+  app.get("/api/store/admin/shipping-inbox", async (req, res) => {
+    try {
+      await requireStaff(req);
+      const db = await getDb();
+      const pendingStatuses = new Set(["paid", "processing"]);
+      const rows = await db
+        .collection("store_orders")
+        .find({})
+        .sort({ createdAt: -1 })
+        .limit(300)
+        .toArray();
+      const orders = rows.filter((o) => {
+        const method = String(o?.fulfillment?.method || "").toLowerCase();
+        if (method !== "shipping" && method !== "envio" && method !== "envío") return false;
+        return pendingStatuses.has(String(o?.status || ""));
+      });
+      res.json({ ok: true, orders });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
+  app.post("/api/store/admin/orders/:id/packing-print", async (req, res) => {
+    try {
+      const staff = await requireStaff(req);
+      const db = await getDb();
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isFinite(id) || id < 1) return res.status(400).json({ ok: false, error: "id inválido." });
+      const now = new Date();
+      const r = await db.collection("store_orders").updateOne(
+        { _id: id },
+        {
+          $set: {
+            packing_print_at: now,
+            updatedAt: now,
+          },
+          $push: {
+            history: {
+              at: now,
+              by: { id: staff.id, email: staff.email, name: staff.name },
+              status: "packing_print",
+              note: "Ticket de envío impreso",
+            },
+          },
+        }
+      );
+      if (!r.matchedCount) return res.status(404).json({ ok: false, error: "Orden no encontrada." });
+      const order = await db.collection("store_orders").findOne({ _id: id });
+      res.json({ ok: true, order });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
   app.get("/api/store/admin/orders/:id", async (req, res) => {
     try {
       await requireStaff(req);

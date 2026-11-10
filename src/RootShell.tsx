@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import { PosPopupProvider } from "./pos/PosPopupContext";
 import { PosPopupHost } from "./pos/PosPopupHost";
+import { ShippingInboxHost } from "./shipping/ShippingInboxHost";
 import App from "./App";
 
 function basename(): string | undefined {
@@ -53,6 +54,7 @@ export default function RootShell() {
           <AuthProvider>
             <PosPopupProvider>
               <App />
+              <ShippingInboxHost />
               <PosPopupHost />
             </PosPopupProvider>
           </AuthProvider>
