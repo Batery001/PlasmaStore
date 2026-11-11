@@ -11,6 +11,10 @@ const DEFAULTS = {
   company_rut: "",
   company_address: "",
   company_giro: "Comercio al por menor de juegos y juguetes",
+  /** Portada pública: tienda en arreglo; login/perfil/admin sí, compra no. */
+  maintenance_mode: true,
+  maintenance_message:
+    "Estamos haciendo arreglos en la página. Volvemos pronto con la tienda online.",
 };
 
 /**
@@ -36,6 +40,13 @@ export async function readStoreOps(db) {
     company_rut: String(raw.company_rut || "").trim().slice(0, 20),
     company_address: String(raw.company_address || "").trim().slice(0, 240),
     company_giro: String(raw.company_giro || DEFAULTS.company_giro).trim().slice(0, 160) || DEFAULTS.company_giro,
+    maintenance_mode:
+      raw.maintenance_mode === undefined
+        ? DEFAULTS.maintenance_mode
+        : raw.maintenance_mode === true || raw.maintenance_mode === 1 || raw.maintenance_mode === "1",
+    maintenance_message:
+      String(raw.maintenance_message || DEFAULTS.maintenance_message).trim().slice(0, 500) ||
+      DEFAULTS.maintenance_message,
     updatedAt: raw.updatedAt || null,
   };
 }
@@ -70,6 +81,14 @@ export async function saveStoreOps(db, body) {
   if (body.company_address !== undefined) next.company_address = String(body.company_address || "").trim().slice(0, 240);
   if (body.company_giro !== undefined) {
     next.company_giro = String(body.company_giro || "").trim().slice(0, 160) || DEFAULTS.company_giro;
+  }
+  if (body.maintenance_mode !== undefined) {
+    next.maintenance_mode =
+      body.maintenance_mode === true || body.maintenance_mode === 1 || body.maintenance_mode === "1";
+  }
+  if (body.maintenance_message !== undefined) {
+    next.maintenance_message =
+      String(body.maintenance_message || "").trim().slice(0, 500) || DEFAULTS.maintenance_message;
   }
   const now = new Date();
   const doc = { _id: STORE_OPS_ID, ...next, updatedAt: now };

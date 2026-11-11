@@ -8,6 +8,7 @@ import { PlasmaOrbLogo } from "./PlasmaOrbLogo";
 import { CartNavIcon } from "./CartNavIcon";
 import { HeaderSearch } from "./HeaderSearch";
 import { WhatsAppFloat } from "../components/WhatsAppFloat";
+import { MaintenanceGate } from "../components/MaintenanceGate";
 import styles from "./layout.module.css";
 
 type StoreTag = { id: number; name: string; slug: string; order?: number };
@@ -219,13 +220,15 @@ export function Layout() {
         </nav>
       </header>
       <main className={isLanding ? styles.mainLanding : styles.main}>
-        {needsRut ? (
-          <div className={styles.rutBanner} role="status">
-            Completa tu RUT en{" "}
-            <Link to="/perfil">Mi cuenta</Link> para evitar cuentas duplicadas y poder comprar.
-          </div>
-        ) : null}
-        <Outlet />
+        <MaintenanceGate>
+          {needsRut ? (
+            <div className={styles.rutBanner} role="status">
+              Completa tu RUT en{" "}
+              <Link to="/perfil">Mi cuenta</Link> para evitar cuentas duplicadas y poder comprar.
+            </div>
+          ) : null}
+          <Outlet />
+        </MaintenanceGate>
       </main>
       <footer className={styles.footer}>
         {site.socials.length > 0 ? (

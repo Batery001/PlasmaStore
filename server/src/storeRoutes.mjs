@@ -354,6 +354,16 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
     return u;
   }
 
+  /** Bloquea compra web si hay mantenimiento (POS admin/staff no usa estas rutas). */
+  async function assertPurchasesOpen(db) {
+    const ops = await readStoreOps(db);
+    if (!ops.maintenance_mode) return;
+    throw Object.assign(
+      new Error(ops.maintenance_message || "Tienda en mantenimiento. La compra online está pausada."),
+      { status: 503 }
+    );
+  }
+
   /** Usuario logueado o invitado (cookie ps_guest). */
   async function resolveCartActor(req, res) {
     try {
@@ -1775,6 +1785,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
     try {
       const actor = await resolveCartActor(req, res);
       const db = await getDb();
+      await assertPurchasesOpen(db);
       const eventId = parseInt(String(req.params.id), 10);
       const event = await findEventById(db, eventId);
       if (!event || !event.active) return res.status(404).json({ ok: false, error: "Evento no encontrado." });
@@ -2046,6 +2057,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
     try {
       const actor = await resolveCartActor(req, res);
       const db = await getDb();
+      await assertPurchasesOpen(db);
       await expireReservations(db);
 
       const buyerEmail = String(req.body?.fulfillment?.email || req.body?.email || actor.user?.email || "")
@@ -3717,6 +3729,20 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
     }
   });
 
+  app.get("/api/store/maintenance", async (_req, res) => {
+    try {
+      const db = await getDb();
+      const ops = await readStoreOps(db);
+      res.json({
+        ok: true,
+        enabled: Boolean(ops.maintenance_mode),
+        message: ops.maintenance_message,
+      });
+    } catch (e) {
+      handleErr(res, e);
+    }
+  });
+
   app.get("/api/store/admin/ops", async (req, res) => {
     try {
       await requireAdmin(req);
@@ -4179,6 +4205,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
     try {
       const actor = await resolveCartActor(req, res);
       const db = await getDb();
+      await assertPurchasesOpen(db);
       await expireReservations(db);
       const productId = parseInt(String(req.body?.productId), 10);
       let quantity = parseInt(String(req.body?.quantity ?? "1"), 10);
@@ -4240,6 +4267,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
     try {
       const actor = await resolveCartActor(req, res);
       const db = await getDb();
+      await assertPurchasesOpen(db);
       await expireReservations(db);
       const productId = parseInt(String(req.body?.productId), 10);
       let quantity = parseInt(String(req.body?.quantity), 10);
@@ -4292,6 +4320,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
   app.post("/api/store/checkout/coupon/validate", async (req, res) => {
     try {
       const db = await getDb();
+      await assertPurchasesOpen(db);
       const code = String(req.body?.code || "").trim();
       const subtotal = Math.max(0, parseInt(String(req.body?.subtotal_cents ?? 0), 10) || 0);
       const v = await validateCoupon(db, code, subtotal);

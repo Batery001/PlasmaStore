@@ -10,6 +10,8 @@ type Ops = {
   company_rut: string;
   company_address: string;
   company_giro: string;
+  maintenance_mode: boolean;
+  maintenance_message: string;
 };
 
 export function AdminOps() {
@@ -141,7 +143,31 @@ export function AdminOps() {
       {err ? <p className={adminStyles.error}>{err}</p> : null}
 
       <form className={adminStyles.panelCard} onSubmit={(e) => void saveOps(e)}>
-        <h2>Checkout y cuenta</h2>
+        <h2>Portada / mantenimiento</h2>
+        <p className={adminStyles.muted}>
+          Con esto activo, el público ve una portada de “en arreglo”. Siguen pudiendo entrar a login y Mi cuenta; la
+          compra online queda bloqueada. Admin y staff ven la tienda con un aviso.
+        </p>
+        <label className={adminStyles.label} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <input
+            type="checkbox"
+            checked={Boolean(ops.maintenance_mode)}
+            onChange={(e) => setOps({ ...ops, maintenance_mode: e.target.checked })}
+          />
+          Activar modo mantenimiento (portada pública)
+        </label>
+        <label className={adminStyles.label}>
+          Mensaje de la portada
+          <textarea
+            className={adminStyles.input}
+            rows={3}
+            value={ops.maintenance_message || ""}
+            onChange={(e) => setOps({ ...ops, maintenance_message: e.target.value })}
+            placeholder="Estamos haciendo arreglos…"
+          />
+        </label>
+
+        <h2 style={{ marginTop: "1.25rem" }}>Checkout y cuenta</h2>
         <label className={adminStyles.label} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
           <input
             type="checkbox"
