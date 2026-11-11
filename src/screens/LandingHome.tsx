@@ -272,12 +272,10 @@ export function LandingHome() {
                               <span className={styles.sealedPriceOld}>{formatCLP(p.compare_price_cents)}</span>
                               <span className={styles.sealedPriceNew}>{formatCLP(p.price_cents)}</span>
                             </div>
-                            <span className={styles.sealedStock}>Stock: {p.stock}</span>
                           </div>
                         ) : (
                           <div className={styles.sealedMeta}>
                             <span className={styles.sealedPrice}>{formatCLP(p.price_cents)}</span>
-                            <span className={styles.sealedStock}>Stock: {p.stock}</span>
                           </div>
                         )}
                         <div className={styles.sealedActions} aria-hidden>

@@ -236,10 +236,8 @@ export function Catalog() {
                 <Link to={`/producto/${p.id}`} className={styles.cardTitleLink}>
                   <h3 className={styles.cardTitle}>{p.name}</h3>
                 </Link>
-                <p className={styles.cardDesc}>{p.description}</p>
                 <div className={styles.priceRow}>
                   <span className={styles.price}>{formatCLP(p.price_cents)}</span>
-                  <span className={styles.stock}>{p.stock > 0 ? `Stock ${p.stock}` : "Agotado"}</span>
                 </div>
                 <button type="button" className={styles.btnPrimary} onClick={() => addToCart(p)} disabled={p.stock < 1}>
                   {p.stock < 1 ? "Agotado" : "Agregar al carrito"}
