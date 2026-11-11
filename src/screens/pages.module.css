@@ -1447,6 +1447,8 @@
 .detailDesc {
   color: rgba(226, 232, 240, 0.9);
   line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .detailBackRow {

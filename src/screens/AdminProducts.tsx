@@ -270,7 +270,7 @@ export function AdminProducts({
     }
     const fd = new FormData();
     fd.append("name", name.trim());
-    fd.append("description", description.trim());
+    fd.append("description", description);
     fd.append("price_cents", String(price_cents));
     if (compare_price_cents != null) fd.append("compare_price_cents", String(compare_price_cents));
     fd.append("stock", String(parseInt(stock, 10) || 0));
@@ -1127,7 +1127,7 @@ function ProductRow({
     try {
       await onSave(p.id, {
         name: nm,
-        description: description.trim(),
+        description,
         price_cents,
         compare_price_cents,
         stock: st,

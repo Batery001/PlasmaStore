@@ -4931,7 +4931,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
       await requireAdmin(req);
       const db = await getDb();
       const name = String(req.body?.name || "").trim();
-      const description = String(req.body?.description || "").trim();
+      const description = String(req.body?.description ?? "");
       const price_cents = parseInt(String(req.body?.price_cents), 10);
       const compare_price_cents =
         req.body?.compare_price_cents == null || String(req.body.compare_price_cents).trim() === ""
@@ -5035,7 +5035,7 @@ export function mountStoreRoutes(app, { getDb, uploadRoot }) {
         if (!name) return res.status(400).json({ ok: false, error: "Nombre vacío." });
         $set.name = name;
       }
-      if (req.body?.description !== undefined) $set.description = String(req.body.description);
+      if (req.body?.description !== undefined) $set.description = String(req.body.description ?? "");
       if (req.body?.price_cents !== undefined) {
         const price_cents = parseInt(String(req.body.price_cents), 10);
         if (!Number.isFinite(price_cents) || price_cents < 0) return res.status(400).json({ ok: false, error: "Precio inválido." });
