@@ -279,22 +279,35 @@
 .navDropPanel {
   position: absolute;
   left: 0;
-  top: calc(100% + 10px);
+  /* Pegado al trigger: un hueco hacía que el menú se cerrara al ir a las etiquetas */
+  top: 100%;
   min-width: min(78vw, 520px);
   padding: 0.85rem 0.85rem 0.65rem;
+  margin-top: 0;
   border-radius: 18px;
   background: rgba(8, 12, 28, 0.96);
   border: 1px solid rgba(125, 211, 252, 0.2);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 18px 60px rgba(0, 0, 0, 0.55),
     0 0 32px rgba(56, 189, 248, 0.12);
   opacity: 0;
-  transform: translateY(8px) scale(0.985);
+  transform: translateY(4px) scale(0.985);
   pointer-events: none;
   transition: opacity 160ms ease, transform 160ms ease;
-  z-index: 20;
+  z-index: 40;
 }
 
-.navDrop:hover .navDropPanel {
+/* Puente invisible por si queda espacio con el header */
+.navDropPanel::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -14px;
+  height: 14px;
+}
+
+.navDrop:hover .navDropPanel,
+.navDrop:focus-within .navDropPanel {
   opacity: 1;
   transform: translateY(0) scale(1);
   pointer-events: auto;
